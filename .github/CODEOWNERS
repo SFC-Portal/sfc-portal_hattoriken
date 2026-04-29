@@ -3,22 +3,22 @@
 # このファイルで指定されたユーザーは、該当ファイルの変更時に
 # 自動的にPRレビュアーとして割り当てられます。
 #
-# 書式: <パターン> <@ユーザー名 or @チーム名>
+# 書式: <パターン> <@org/team or @ユーザー名>
 
 # === デフォルトオーナー（全ファイル） ===
-* @kawaguchi-sota
+* @SFC-Portal/reviewers
 
 # === フロントエンド ===
-/frontend/ @kawaguchi-sota
+/frontend/ @SFC-Portal/reviewers
 
 # === バックエンド ===
-/backend/ @kawaguchi-sota
+/backend/ @SFC-Portal/reviewers
 
-# === インフラ・設定ファイル ===
-/.github/ @kawaguchi-sota
-/scripts/ @kawaguchi-sota
-/supabase/ @kawaguchi-sota
+# === インフラ・設定ファイル（管理者のみ） ===
+/.github/ @1110soda
+/scripts/ @1110soda
+/supabase/ @1110soda
 
 # === ドキュメント ===
-/docs/ @kawaguchi-sota
-*.md @kawaguchi-sota
+/docs/ @SFC-Portal/reviewers
+*.md @SFC-Portal/reviewers
