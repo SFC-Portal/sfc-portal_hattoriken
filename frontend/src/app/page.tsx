@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Search, Calendar, MapPin, Bell, Coffee } from "lucide-react";
+import { Search, Calendar, CheckSquare, Users, Bus } from "lucide-react";
 
 const features = [
   {
@@ -17,24 +17,24 @@ const features = [
     color: "bg-green-50 text-green-600",
   },
   {
-    icon: MapPin,
-    title: "キャンパスマップ",
-    description: "教室・施設の場所を地図で確認",
-    href: "/map",
-    color: "bg-yellow-50 text-yellow-600",
+    icon: CheckSquare,
+    title: "タスク管理",
+    description: "課題・レポートの締切を管理",
+    href: "/tasks",
+    color: "bg-purple-50 text-purple-600",
   },
   {
-    icon: Bell,
-    title: "お知らせ",
-    description: "SFC関連の最新情報をチェック",
-    href: "/news",
-    color: "bg-red-50 text-red-600",
+    icon: Users,
+    title: "SFC SNS",
+    description: "キャンパス仲間と情報交換",
+    href: "/sns",
+    color: "bg-pink-50 text-pink-600",
   },
   {
-    icon: Coffee,
-    title: "食堂メニュー",
-    description: "本日のランチメニューを確認",
-    href: "/cafeteria",
+    icon: Bus,
+    title: "バス時刻表",
+    description: "湘南台・辻堂行きの次のバスを確認",
+    href: "/bus",
     color: "bg-orange-50 text-orange-600",
   },
 ];

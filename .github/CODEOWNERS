@@ -1,0 +1,24 @@
+# CODEOWNERS - PRレビュー担当者の自動割り当て
+#
+# このファイルで指定されたユーザーは、該当ファイルの変更時に
+# 自動的にPRレビュアーとして割り当てられます。
+#
+# 書式: <パターン> <@ユーザー名 or @チーム名>
+
+# === デフォルトオーナー（全ファイル） ===
+* @kawaguchi-sota
+
+# === フロントエンド ===
+/frontend/ @kawaguchi-sota
+
+# === バックエンド ===
+/backend/ @kawaguchi-sota
+
+# === インフラ・設定ファイル ===
+/.github/ @kawaguchi-sota
+/scripts/ @kawaguchi-sota
+/supabase/ @kawaguchi-sota
+
+# === ドキュメント ===
+/docs/ @kawaguchi-sota
+*.md @kawaguchi-sota

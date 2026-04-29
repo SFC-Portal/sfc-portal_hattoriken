@@ -1,33 +1,39 @@
-# Node
+# === Node.js ===
 node_modules/
 .next/
 out/
 dist/
 *.tsbuildinfo
 
-# Python
+# === Python ===
 __pycache__/
 *.py[cod]
 *.egg-info/
 .venv/
 venv/
+.pytest_cache/
+
+# === 環境変数（機密情報） ===
 .env
 *.env
-
-# Env files (keep examples)
 .env.local
 .env.production
 !.env.local.example
 !.env.example
 
-# OS
+# === OS ===
 .DS_Store
 Thumbs.db
 
-# Editors
+# === エディタ（個人設定は除外、共有設定は追跡） ===
 .vscode/settings.json
+!.vscode/extensions.json
 .idea/
 
-# Supabase
+# === Supabase ===
 supabase/.branches/
 supabase/.temp/
+
+# === Claude Code（個人設定は除外） ===
+.claude/settings.local.json
+CLAUDE.local.md

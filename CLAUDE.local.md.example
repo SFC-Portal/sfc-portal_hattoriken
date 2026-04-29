@@ -1,0 +1,37 @@
+# 個人設定 - CLAUDE.local.md
+
+このファイルを `CLAUDE.local.md` にコピーして個人設定を記述する。
+**このファイルはgitignoreされるため、機密情報を含めても安全。**
+
+## セットアップ
+
+```bash
+cp CLAUDE.local.md.example CLAUDE.local.md
+```
+
+## 個人環境
+
+```
+# ローカル開発URL
+- Frontend: http://localhost:3000
+- Backend: http://localhost:8000
+- Supabase: http://localhost:54321
+```
+
+## 担当機能
+
+<!-- 自分が担当する機能を記載 -->
+- [ ] シラバス
+- [ ] 時間割
+- [ ] タスク
+- [ ] SNS
+- [ ] バス
+
+## 作業メモ
+
+<!-- 進行中のタスクや備忘録 -->
+
+## 個人的なコーディング好み
+
+<!-- Claudeに伝えたい個人的な好みがあれば記載 -->
+<!-- 例: 変数名は短めが好き、コメントは多めに、など -->

@@ -1,0 +1,134 @@
+#!/bin/bash
+
+# === SFC Portal Pre-commit チェック ===
+
+set -e
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
+error_count=0
+
+print_check() {
+    echo -e "${YELLOW}チェック中:${NC} $1"
+}
+
+print_pass() {
+    echo -e "${GREEN}✓${NC} $1"
+}
+
+print_fail() {
+    echo -e "${RED}✗${NC} $1"
+    ((error_count++))
+}
+
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "  Pre-commit チェック"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+# === 1. ブランチ名チェック ===
+print_check "ブランチ名"
+
+branch_name=$(git symbolic-ref --short HEAD 2>/dev/null)
+
+if [ "$branch_name" = "main" ] || [ "$branch_name" = "master" ]; then
+    print_fail "mainブランチに直接コミットしないでください"
+    echo "    新しいブランチを作成: git checkout -b {名前}/{機能}/{変更}"
+else
+    # パターン: name/feature/change (小文字、ハイフン、数字)
+    pattern="^[a-z]+/[a-z]+/[a-z0-9-]+$"
+
+    if [[ $branch_name =~ $pattern ]]; then
+        print_pass "ブランチ名: $branch_name"
+    else
+        print_fail "ブランチ名が規則に従っていません: $branch_name"
+        echo "    正しい形式: {名前}/{機能}/{変更内容}"
+        echo "    例: sota/tasks/add-create-form"
+    fi
+fi
+
+# === 2. 機密ファイルチェック ===
+print_check "機密ファイル"
+
+staged_files=$(git diff --cached --name-only)
+sensitive_patterns=(".env" ".env.local" ".env.production" "credentials" "secret" "*.pem" "*.key")
+found_sensitive=false
+
+for file in $staged_files; do
+    for pattern in "${sensitive_patterns[@]}"; do
+        if [[ $file == *$pattern* ]]; then
+            if [ "$found_sensitive" = false ]; then
+                print_fail "機密ファイルが含まれています:"
+                found_sensitive=true
+            fi
+            echo "    - $file"
+        fi
+    done
+done
+
+if [ "$found_sensitive" = false ]; then
+    print_pass "機密ファイルなし"
+fi
+
+# === 3. 大きなファイルチェック ===
+print_check "ファイルサイズ"
+
+max_size=5242880  # 5MB
+large_files=false
+
+for file in $staged_files; do
+    if [ -f "$file" ]; then
+        size=$(wc -c < "$file" 2>/dev/null || echo 0)
+        if [ "$size" -gt "$max_size" ]; then
+            if [ "$large_files" = false ]; then
+                print_fail "大きなファイル（5MB超）が含まれています:"
+                large_files=true
+            fi
+            echo "    - $file ($(numfmt --to=iec $size 2>/dev/null || echo "${size}B"))"
+        fi
+    fi
+done
+
+if [ "$large_files" = false ]; then
+    print_pass "大きなファイルなし"
+fi
+
+# === 4. フロントエンドLint（変更がある場合） ===
+frontend_changes=$(echo "$staged_files" | grep "^frontend/" || true)
+
+if [ -n "$frontend_changes" ]; then
+    print_check "フロントエンドLint"
+
+    cd frontend 2>/dev/null || true
+    if [ -f "package.json" ] && command -v npm &> /dev/null; then
+        if npm run lint --silent 2>/dev/null; then
+            print_pass "Lintエラーなし"
+        else
+            print_fail "Lintエラーがあります"
+            echo "    npm run lint で確認してください"
+        fi
+    fi
+    cd - > /dev/null 2>&1 || true
+fi
+
+# === 結果 ===
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+if [ $error_count -gt 0 ]; then
+    echo -e "${RED}  $error_count 件のエラーがあります${NC}"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+    echo "コミットを強制する場合: git commit --no-verify"
+    echo ""
+    exit 1
+else
+    echo -e "${GREEN}  すべてのチェックに合格しました${NC}"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+    exit 0
+fi

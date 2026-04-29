@@ -1,4 +1,5 @@
 from sqlalchemy import Column, String, Integer, Text
+from sqlalchemy.orm import relationship
 from app.db.session import Base
 
 
@@ -19,3 +20,5 @@ class Course(Base):
     description = Column(Text)
     syllabus_url = Column(String)
     year = Column(Integer)
+
+    tasks = relationship("Task", back_populates="course")
