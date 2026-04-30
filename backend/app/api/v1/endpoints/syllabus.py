@@ -20,11 +20,21 @@ def search(
     limit: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
 ):
-    # TODO: implement via syllabus_service
-    raise NotImplementedError
+    return syllabus_service.search_courses(
+        db,
+        keyword=keyword,
+        instructor=instructor,
+        day=day,
+        period=period,
+        semester=semester,
+        page=page,
+        limit=limit,
+    )
 
 
 @router.get("/{course_id}", response_model=CourseOut)
 def get_course(course_id: str, db: Session = Depends(get_db)):
-    # TODO: implement via syllabus_service
-    raise NotImplementedError
+    course = syllabus_service.get_course_by_id(db, course_id)
+    if course is None:
+        raise HTTPException(status_code=404, detail="科目が見つかりません")
+    return course
