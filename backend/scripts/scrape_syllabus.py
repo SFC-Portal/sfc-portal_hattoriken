@@ -18,6 +18,7 @@ from urllib.parse import urlparse, parse_qs
 # backend/ を sys.path に追加して app モジュールをインポートできるようにする
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+import re
 import requests
 from bs4 import BeautifulSoup
 from selenium import webdriver
@@ -202,13 +203,21 @@ def _extract_year(url: str) -> int | None:
     return int(yr) if yr else None
 
 
-def _parse_day_period(date_period: list[str]) -> tuple[str | None, str | None]:
-    if not date_period:
-        return None, None
-    first = date_period[0].strip()
-    if not first:
-        return None, None
-    return first[0], first[1:] or None
+def _parse_all_day_periods(date_period: list[str]) -> list[tuple[str, str]]:
+    """
+    ["月1・2", "水3", "火3,4"] → [("月","1"),("月","2"),("水","3"),("火","3"),("火","4")]
+    各エントリの1文字目を曜日、残りから数字1文字ずつを時限として展開する。
+    区切り文字（・、,など）や区切りなし（月34）にも対応。
+    """
+    result = []
+    for entry in date_period:
+        entry = entry.strip()
+        if not entry:
+            continue
+        day = entry[0]
+        for p in re.findall(r'\d', entry[1:]):
+            result.append((day, p))
+    return result
 
 
 # === パイプライン ===
@@ -228,16 +237,16 @@ def run_pipeline(year: int) -> None:
 
     db = SessionLocal()
     try:
+        inserted = 0
         for course in courses:
             if course.get("title") == "ERROR":
                 continue
 
-            course_id = _extract_course_id(course["url"])
-            if not course_id:
+            entno = _extract_course_id(course["url"])
+            if not entno:
                 continue
 
             yr = _extract_year(course["url"]) or year
-            day, period = _parse_day_period(course.get("datePeriod", []))
             instructor = ", ".join(t.strip() for t in course.get("teachers", []))
             credit_raw = course.get("credit")
             try:
@@ -245,31 +254,42 @@ def run_pipeline(year: int) -> None:
             except (ValueError, TypeError):
                 credits = None
 
-            existing = db.get(Course, course_id)
-            if existing:
-                existing.name = course["title"]
-                existing.instructor = instructor
-                existing.day = day
-                existing.period = period
-                existing.syllabus_url = course["url"]
-                existing.year = yr
-                existing.credits = credits
-            else:
-                db.add(Course(
-                    id=course_id,
-                    name=course["title"],
-                    instructor=instructor,
-                    day=day,
-                    period=period,
-                    syllabus_url=course["url"],
-                    year=yr,
-                    credits=credits,
-                ))
+            day_periods = _parse_all_day_periods(course.get("datePeriod", []))
+
+            # 曜日時限なし（集中講義など）は entno をそのままIDに使う
+            entries = (
+                [(entno, None, None)]
+                if not day_periods
+                else [(f"{entno}_{d}{p}", d, p) for d, p in day_periods]
+            )
+
+            for course_id, day, period in entries:
+                existing = db.get(Course, course_id)
+                if existing:
+                    existing.name = course["title"]
+                    existing.instructor = instructor
+                    existing.day = day
+                    existing.period = period
+                    existing.syllabus_url = course["url"]
+                    existing.year = yr
+                    existing.credits = credits
+                else:
+                    db.add(Course(
+                        id=course_id,
+                        name=course["title"],
+                        instructor=instructor,
+                        day=day,
+                        period=period,
+                        syllabus_url=course["url"],
+                        year=yr,
+                        credits=credits,
+                    ))
+                inserted += 1
 
         db.commit()
         ok = [c for c in courses if c.get("title") != "ERROR"]
         err = [c for c in courses if c.get("title") == "ERROR"]
-        print(f"\n完了: DB書き込み {len(ok)} 件 / エラー {len(err)} 件")
+        print(f"\n完了: 授業 {len(ok)} 件 → DB {inserted} レコード / エラー {len(err)} 件")
     finally:
         db.close()
 
