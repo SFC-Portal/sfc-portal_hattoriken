@@ -37,10 +37,29 @@ cd sfc-portal_hattoriken
 
 ### 1.3 環境変数の設定
 
-セットアップ後、以下のファイルを編集して環境変数を設定してください：
+セットアップ後、環境管理担当者から以下の値を受け取り、各ファイルに設定してください：
 
-- `frontend/.env.local` — Supabase URL、APIキーなど
-- `backend/.env` — データベース接続情報など
+**`frontend/.env.local`**
+
+| 変数名 | 内容 |
+|--------|------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase Project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Publishable key |
+| `NEXT_PUBLIC_API_URL` | `http://localhost:8000`（固定） |
+| `SUPABASE_SERVICE_ROLE_KEY` | Secret key |
+
+**`backend/.env`**
+
+| 変数名 | 内容 |
+|--------|------|
+| `SUPABASE_URL` | Supabase Project URL |
+| `SUPABASE_KEY` | Secret key |
+| `DATABASE_URL` | DB接続文字列（`postgresql://...`） |
+| `SECRET_KEY` | 任意のランダム文字列 |
+| `CORS_ORIGINS` | `["http://localhost:3000"]`（固定） |
+| `DEBUG` | `true`（固定） |
+
+> **注意**: `.env` ファイルは絶対にgitにコミットしないでください。
 
 ---
 

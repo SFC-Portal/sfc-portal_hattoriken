@@ -25,8 +25,7 @@
 ### 必要環境
 
 - Node.js 18+
-- Python 3.11+
-- Supabase CLI（ローカル開発時）
+- Python 3.11+（3.13動作確認済み）
 
 ### クイックスタート
 
@@ -69,12 +68,11 @@ uvicorn app.main:app --reload  # http://localhost:8000
 
 </details>
 
-### Supabase（ローカル）
+### Supabase
 
-```bash
-supabase start
-supabase db push
-```
+このプロジェクトはSupabase cloudを使用しています（Dockerなし）。
+
+環境変数（`frontend/.env.local` と `backend/.env`）に設定するURLとキーは、環境管理担当者から受け取ってください。
 
 ## ディレクトリ構造
 
