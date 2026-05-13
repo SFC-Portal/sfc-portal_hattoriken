@@ -8,12 +8,12 @@
 
 慶應義塾大学SFC学生向け学生生活支援Webアプリ。
 
-| レイヤー | 技術スタック |
-|---------|-------------|
+| レイヤー | 技術スタック                                                            |
+| -------- | ----------------------------------------------------------------------- |
 | Frontend | Next.js 14 (App Router), TypeScript, Tailwind CSS, React Query, Zustand |
-| Backend | FastAPI, SQLAlchemy, Pydantic v2 |
-| Database | Supabase (PostgreSQL) |
-| Auth | Supabase Auth |
+| Backend  | FastAPI, SQLAlchemy, Pydantic v2                                        |
+| Database | Supabase (PostgreSQL)                                                   |
+| Auth     | Supabase Auth                                                           |
 
 ## チームセットアップ
 
@@ -143,12 +143,12 @@ page.tsx → components/ → hooks/ → api/ → types/
 
 ### 命名規則
 
-| 対象 | 形式 | 例 |
-|-----|------|---|
-| コンポーネント | PascalCase | `TaskCard.tsx` |
-| フック | use + PascalCase | `useTasks.ts` |
-| API関数 | 動詞 + 名詞 | `getTasks` |
-| ストア | 名詞 + Store | `taskStore.ts` |
+| 対象           | 形式             | 例             |
+| -------------- | ---------------- | -------------- |
+| コンポーネント | PascalCase       | `TaskCard.tsx` |
+| フック         | use + PascalCase | `useTasks.ts`  |
+| API関数        | 動詞 + 名詞      | `getTasks`     |
+| ストア         | 名詞 + Store     | `taskStore.ts` |
 
 ### スタイル
 
@@ -166,13 +166,13 @@ page.tsx → components/ → hooks/ → api/ → types/
 
 ## 機能モジュール
 
-| 機能 | パス | 状態 |
-|-----|-----|------|
-| シラバス | `/syllabus` | スタブ |
-| 時間割 | `/timetable` | スタブ |
-| タスク | `/tasks` | スタブ |
-| SNS | `/sns` | スタブ |
-| バス | `/bus` | スタブ |
+| 機能     | パス         | 状態   |
+| -------- | ------------ | ------ |
+| シラバス | `/syllabus`  | スタブ |
+| 時間割   | `/timetable` | スタブ |
+| タスク   | `/tasks`     | スタブ |
+| SNS      | `/sns`       | スタブ |
+| バス     | `/bus`       | スタブ |
 
 ## カスタムコマンド
 

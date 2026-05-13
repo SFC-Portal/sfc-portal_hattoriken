@@ -37,3 +37,4 @@ supabase/.temp/
 # === Claude Code（個人設定は除外） ===
 .claude/settings.local.json
 CLAUDE.local.md
+.claude/memory.md
