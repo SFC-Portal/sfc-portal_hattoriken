@@ -98,13 +98,17 @@ CLAUDE.local.md
 ## コマンド
 
 ```bash
-# フロントエンド
+# 開発サーバー（フロント・バック同時起動）
+./scripts/dev.sh
+
+# フロントエンド個別
 cd frontend && npm run dev    # 開発サーバー
 cd frontend && npm run build  # 本番ビルド
 cd frontend && npm run lint   # Lint
 
-# バックエンド
-cd backend && uvicorn app.main:app --reload  # 開発サーバー
+# バックエンド個別（venv有効化が必要）
+cd backend && source venv/bin/activate
+uvicorn app.main:app --reload
 ```
 
 ## アーキテクチャ

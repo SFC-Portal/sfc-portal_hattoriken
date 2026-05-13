@@ -14,7 +14,7 @@ Gemini、ChatGPT、その他のAIアシスタント用。このファイルを�
 | レイヤー | 技術 |
 |---------|-----|
 | フロントエンド | Next.js 14 (App Router), TypeScript (strict), Tailwind CSS, React Query, Zustand |
-| バックエンド | FastAPI, Python 3.11+, SQLAlchemy 2, Pydantic v2 |
+| バックエンド | FastAPI, Python 3.11+（3.13動作確認済み）, SQLAlchemy 2（同期）, Pydantic v2 |
 | データベース | Supabase (PostgreSQL) |
 | 認証 | Supabase Auth |
 
@@ -122,7 +122,7 @@ export async function createTask(input: CreateTaskInput): Promise<Task> {
 
 ```python
 from fastapi import APIRouter, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.schemas.task import TaskCreate, TaskResponse
@@ -131,13 +131,13 @@ from app.services.task_service import TaskService
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
 @router.get("", response_model=list[TaskResponse])
-async def get_tasks(db: AsyncSession = Depends(get_db)):
+async def get_tasks(db: Session = Depends(get_db)):
     """タスク一覧を取得"""
     service = TaskService(db)
     return await service.get_all()
 
 @router.post("", response_model=TaskResponse, status_code=201)
-async def create_task(data: TaskCreate, db: AsyncSession = Depends(get_db)):
+async def create_task(data: TaskCreate, db: Session = Depends(get_db)):
     """新規タスクを作成"""
     service = TaskService(db)
     return await service.create(data)
@@ -213,9 +213,14 @@ CLAUDE.local.md
 ## セットアップ
 
 ```bash
+# 初回
 git clone <repository-url>
 cd sfc-portal_hattoriken
 ./scripts/setup.sh
+# frontend/.env.local と backend/.env に環境変数を設定（担当者から取得）
+
+# 2回目以降
+./scripts/dev.sh
 ```
 
 ---

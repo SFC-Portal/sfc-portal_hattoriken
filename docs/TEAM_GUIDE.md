@@ -185,7 +185,21 @@ git commit --no-verify
 
 ### 3.1 開発サーバーの起動
 
-#### 方法A: 手動で起動
+#### 方法A: 一括起動スクリプト（推奨）
+
+```bash
+./scripts/dev.sh
+```
+
+フロントエンドとバックエンドが同時に起動します。`Ctrl+C` で両方停止。
+
+| URL | 用途 |
+|-----|------|
+| http://localhost:3000 | フロントエンド |
+| http://localhost:8000 | バックエンドAPI |
+| http://localhost:8000/docs | API仕様書（Swagger） |
+
+#### 方法B: 個別に起動
 
 **ターミナル1（フロントエンド）:**
 
@@ -194,19 +208,15 @@ cd frontend
 npm run dev
 ```
 
-→ http://localhost:3000
-
 **ターミナル2（バックエンド）:**
 
 ```bash
 cd backend
-source venv/bin/activate
+source venv/bin/activate  # 毎回必要
 uvicorn app.main:app --reload
 ```
 
-→ http://localhost:8000
-
-#### 方法B: Claude Code を使用
+#### 方法C: Claude Code を使用
 
 ```bash
 claude
@@ -408,7 +418,10 @@ git commit -m "変更内容"
 # プッシュ
 git push -u origin {branch-name}
 
-# 開発サーバー起動
+# 開発サーバー起動（一括）
+./scripts/dev.sh
+
+# 個別起動
 cd frontend && npm run dev
 cd backend && source venv/bin/activate && uvicorn app.main:app --reload
 
