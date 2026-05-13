@@ -15,7 +15,7 @@
 | レイヤー | 技術 |
 |---------|-----|
 | フロントエンド | Next.js 14, TypeScript, Tailwind CSS, React Query |
-| バックエンド | FastAPI, Python 3.11, SQLAlchemy 2, Pydantic v2 |
+| バックエンド | FastAPI, Python 3.11+（3.13動作確認済み）, SQLAlchemy 2, Pydantic v2 |
 | データベース | Supabase (PostgreSQL) |
 | 認証 | Supabase Auth |
 | デプロイ | Vercel (フロント), Supabase (DB) |
@@ -92,8 +92,9 @@ sfc-portal_hattoriken/
 │       ├── schemas/       # Pydanticスキーマ
 │       └── services/      # ビジネスロジック
 │
-└── supabase/          # データベース
-    └── migrations/        # マイグレーションファイル
+└── scripts/           # セットアップ・開発スクリプト
+    ├── setup.sh           # 初回セットアップ
+    └── dev.sh             # 開発サーバー一括起動
 ```
 
 ## 開発ガイド
@@ -101,15 +102,17 @@ sfc-portal_hattoriken/
 ### コマンド一覧
 
 ```bash
-# フロントエンド
-npm run dev          # 開発サーバー起動
-npm run build        # 本番ビルド
-npm run lint         # ESLint実行
-npm run type-check   # TypeScript型チェック
+# 開発サーバー（フロント・バック同時起動）
+./scripts/dev.sh
 
-# バックエンド
-uvicorn app.main:app --reload  # 開発サーバー起動
-pytest                         # テスト実行
+# フロントエンド個別
+cd frontend && npm run dev
+cd frontend && npm run build
+cd frontend && npm run lint
+
+# バックエンド個別（venv有効化が必要）
+cd backend && source venv/bin/activate
+uvicorn app.main:app --reload
 ```
 
 ### チーム開発
