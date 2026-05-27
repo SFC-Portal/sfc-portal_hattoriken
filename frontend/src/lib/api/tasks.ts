@@ -7,8 +7,18 @@ export async function getTasks(
   page = 1,
   limit = 20
 ): Promise<PaginatedResponse<Task>> {
+  const { courseId, dueBefore, dueAfter, sortBy, sortOrder, ...rest } = filters ?? {};
   const { data } = await apiClient.get("/tasks", {
-    params: { ...filters, page, limit },
+    params: {
+      ...rest,
+      ...(courseId && { course_id: courseId }),
+      ...(dueBefore && { due_before: dueBefore }),
+      ...(dueAfter && { due_after: dueAfter }),
+      ...(sortBy && { sort_by: sortBy }),
+      ...(sortOrder && { sort_order: sortOrder }),
+      page,
+      limit,
+    },
   });
   return data;
 }

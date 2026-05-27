@@ -32,6 +32,8 @@ async def get_tasks(
     course_id: Optional[str] = None,
     due_before: Optional[str] = None,
     due_after: Optional[str] = None,
+    sort_by: Optional[str] = Query(None, pattern="^(due_date|priority|created_at)$"),
+    sort_order: Optional[str] = Query("asc", pattern="^(asc|desc)$"),
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
     user_id: str = Depends(get_user_id),
@@ -47,6 +49,8 @@ async def get_tasks(
         course_id=course_id,
         due_before=due_before,
         due_after=due_after,
+        sort_by=sort_by,
+        sort_order=sort_order,
         page=page,
         limit=limit,
     )

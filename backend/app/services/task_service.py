@@ -1,9 +1,16 @@
 from typing import Optional, List
 from sqlalchemy.orm import Session
+from sqlalchemy import asc, desc
 from datetime import datetime
 import uuid
 
 from app.models.task import Task
+
+_SORT_COLUMNS = {
+    "due_date": Task.due_date,
+    "priority": Task.priority,
+    "created_at": Task.created_at,
+}
 
 
 class TaskService:
@@ -19,6 +26,8 @@ class TaskService:
         course_id: Optional[str] = None,
         due_before: Optional[str] = None,
         due_after: Optional[str] = None,
+        sort_by: Optional[str] = None,
+        sort_order: Optional[str] = "asc",
         page: int = 1,
         limit: int = 20,
     ) -> dict:
@@ -38,8 +47,10 @@ class TaskService:
             query = query.filter(Task.due_date >= datetime.fromisoformat(due_after))
 
         total = query.count()
+        col = _SORT_COLUMNS.get(sort_by or "due_date", Task.due_date)
+        order_fn = desc if sort_order == "desc" else asc
         tasks = (
-            query.order_by(Task.due_date.asc().nullslast())
+            query.order_by(order_fn(col).nullslast())
             .offset((page - 1) * limit)
             .limit(limit)
             .all()
