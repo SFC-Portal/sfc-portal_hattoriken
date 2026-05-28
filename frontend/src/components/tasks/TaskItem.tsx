@@ -78,6 +78,8 @@ export function TaskItem({ task }: TaskItemProps) {
           <button
             type="button"
             onClick={() => hasDescription && setExpanded((v) => !v)}
+            aria-disabled={!hasDescription}
+            tabIndex={hasDescription ? 0 : -1}
             className={`flex-1 min-w-0 text-left ${hasDescription ? "cursor-pointer" : "cursor-default"}`}
           >
             <p className={`font-medium leading-snug ${isDone ? "line-through text-gray-400" : "text-gray-900"}`}>

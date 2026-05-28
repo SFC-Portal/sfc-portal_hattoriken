@@ -27,7 +27,7 @@ export function TaskList() {
     setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
   }
 
-  const { data, isLoading, isError } = useTasks({
+  const { data, isPending, isError, refetch } = useTasks({
     ...(activeStatus !== "all" && { status: activeStatus }),
     sortBy,
     sortOrder,
@@ -76,7 +76,7 @@ export function TaskList() {
 
       {/* === タスク一覧 === */}
       <div className="space-y-2">
-        {isLoading && (
+        {isPending && (
           <div className="space-y-2">
             {[...Array(3)].map((_, i) => (
               <div key={i} className="card p-4 h-16 animate-pulse bg-gray-100" />
@@ -85,16 +85,22 @@ export function TaskList() {
         )}
 
         {isError && (
-          <p className="text-center py-8 text-red-500 text-sm">
-            タスクの取得に失敗しました。再読み込みしてください。
-          </p>
+          <div className="text-center py-8 space-y-2">
+            <p className="text-red-500 text-sm">タスクの取得に失敗しました。</p>
+            <button
+              onClick={() => refetch()}
+              className="text-sm text-sfc-blue underline hover:no-underline"
+            >
+              再試行
+            </button>
+          </div>
         )}
 
-        {!isLoading && !isError && data?.data?.length === 0 && (
+        {!isPending && !isError && data?.data?.length === 0 && (
           <p className="text-center py-8 text-gray-400 text-sm">タスクがありません</p>
         )}
 
-        {!isLoading &&
+        {!isPending &&
           !isError &&
           data?.data?.map((task) => <TaskItem key={task.id} task={task} />)}
       </div>

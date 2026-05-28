@@ -169,7 +169,6 @@ export function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
             value={tagInput}
             onChange={(e) => setTagInput(e.target.value)}
             onKeyDown={handleTagKeyDown}
-            onBlur={addTag}
             placeholder={form.tags?.length ? "" : "タグを入力してEnter"}
             className="flex-1 min-w-[120px] outline-none text-sm bg-transparent"
           />

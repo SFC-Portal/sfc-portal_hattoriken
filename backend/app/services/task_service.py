@@ -47,7 +47,7 @@ class TaskService:
             query = query.filter(Task.due_date >= datetime.fromisoformat(due_after))
 
         total = query.count()
-        col = _SORT_COLUMNS.get(sort_by or "due_date", Task.due_date)
+        col = _SORT_COLUMNS[sort_by or "due_date"]
         order_fn = desc if sort_order == "desc" else asc
         tasks = (
             query.order_by(order_fn(col).nullslast())
