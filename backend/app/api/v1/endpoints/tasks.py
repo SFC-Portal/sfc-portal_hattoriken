@@ -109,13 +109,30 @@ async def update_task(
     return task
 
 
+@router.post("/{task_id}/subtasks", response_model=TaskResponse)
+async def create_subtask(
+    task_id: str,
+    task: TaskCreate,
+    user_id: str = Depends(get_user_id),
+    db: Session = Depends(get_db),
+):
+    """Create a subtask under a parent task"""
+    service = TaskService(db)
+    parent = service.get_task(task_id=task_id, user_id=user_id)
+    if not parent:
+        raise HTTPException(status_code=404, detail="Parent task not found")
+    data = task.model_dump()
+    data["parent_id"] = task_id
+    return service.create_task(user_id=user_id, data=data)
+
+
 @router.delete("/{task_id}", status_code=204)
 async def delete_task(
     task_id: str,
     user_id: str = Depends(get_user_id),
     db: Session = Depends(get_db),
 ):
-    """Delete a task"""
+    """Delete a task (and all subtasks)"""
     service = TaskService(db)
     deleted = service.delete_task(task_id=task_id, user_id=user_id)
     if not deleted:

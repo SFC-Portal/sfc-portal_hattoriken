@@ -31,7 +31,10 @@ class TaskService:
         page: int = 1,
         limit: int = 20,
     ) -> dict:
-        query = self.db.query(Task).filter(Task.user_id == user_id)
+        query = self.db.query(Task).filter(
+            Task.user_id == user_id,
+            Task.parent_id == None,  # noqa: E711
+        )
 
         if status:
             query = query.filter(Task.status == status)
@@ -86,13 +89,29 @@ class TaskService:
         task = self.get_task(task_id, user_id)
         if not task:
             return None
+
+        new_status = data.get("status")
         for key, value in data.items():
             if value is not None:
                 setattr(task, key, value)
+
+        if new_status in ("done", "todo"):
+            self._cascade_status(task, new_status)
+
+        if task.parent_id:
+            parent = self.db.query(Task).filter(Task.id == task.parent_id).first()
+            if parent and all(s.status == "done" for s in parent.sub_tasks):
+                parent.status = "done"
+
         task.updated_at = datetime.utcnow()
         self.db.commit()
         self.db.refresh(task)
         return task
+
+    def _cascade_status(self, task: Task, status: str) -> None:
+        for sub in task.sub_tasks:
+            sub.status = status
+            self._cascade_status(sub, status)
 
     def delete_task(self, task_id: str, user_id: str) -> bool:
         task = self.get_task(task_id, user_id)

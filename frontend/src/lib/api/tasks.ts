@@ -46,3 +46,8 @@ export async function getTasksByCourse(courseId: string): Promise<Task[]> {
   const { data } = await apiClient.get(`/tasks/course/${courseId}`);
   return data;
 }
+
+export async function createSubtask(parentId: string, input: TaskCreateInput): Promise<Task> {
+  const { data } = await apiClient.post(`/tasks/${parentId}/subtasks`, input);
+  return data;
+}

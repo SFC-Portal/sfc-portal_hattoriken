@@ -7,6 +7,7 @@ export type TaskCategory = "assignment" | "exam" | "project" | "reading" | "othe
 export interface Task {
   id: string;
   userId: string;
+  parentId?: string;
   title: string;
   description?: string;
   courseId?: string;
@@ -16,6 +17,7 @@ export interface Task {
   status: TaskStatus;
   category: TaskCategory;
   tags?: string[];
+  subTasks?: Task[];
   createdAt: string;
   updatedAt: string;
 }

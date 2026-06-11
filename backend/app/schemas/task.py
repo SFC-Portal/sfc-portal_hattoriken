@@ -37,7 +37,7 @@ class TaskBase(BaseModel):
 
 
 class TaskCreate(TaskBase):
-    pass
+    parent_id: Optional[str] = None
 
 
 class TaskUpdate(BaseModel):
@@ -53,12 +53,17 @@ class TaskUpdate(BaseModel):
 class TaskResponse(TaskBase):
     id: str
     user_id: str
+    parent_id: Optional[str] = None
     course_name: Optional[str] = None
     status: TaskStatus
+    sub_tasks: List["TaskResponse"] = []
     created_at: datetime
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+TaskResponse.model_rebuild()
 
 
 class TaskListResponse(BaseModel):

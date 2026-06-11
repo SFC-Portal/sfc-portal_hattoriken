@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, DateTime, Text, ForeignKey, Enum, ARRAY
+from sqlalchemy import Column, String, DateTime, Text, ForeignKey, Enum, ARRAY
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.session import Base
@@ -40,7 +40,21 @@ class Task(Base):
     status = Column(Enum(*[e.value for e in TaskStatus], name="task_status"), default=TaskStatus.TODO)
     category = Column(Enum(*[e.value for e in TaskCategory], name="task_category"), default=TaskCategory.OTHER)
     tags = Column(ARRAY(String), nullable=True)
+    parent_id = Column(String, ForeignKey("tasks.id"), nullable=True, index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     course = relationship("Course", back_populates="tasks")
+    sub_tasks = relationship(
+        "Task",
+        foreign_keys="[Task.parent_id]",
+        back_populates="parent",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+    parent = relationship(
+        "Task",
+        foreign_keys="[Task.parent_id]",
+        back_populates="sub_tasks",
+        remote_side="[Task.id]",
+    )
