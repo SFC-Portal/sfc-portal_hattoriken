@@ -19,19 +19,25 @@ const PRIORITY_LABELS: Record<TaskPriority, string> = {
 
 function formatDate(d?: string) {
   if (!d) return null;
-  const dt = new Date(d);
-  return `${dt.getMonth() + 1}/${dt.getDate()}`;
+  // タイムゾーン問題を避けるため日付文字列を直接パース
+  const [, m, day] = d.split("T")[0].split("-");
+  return `${parseInt(m)}/${parseInt(day)}`;
 }
 function isOverdue(d?: string, status?: TaskStatus) {
   if (!d || status === "done") return false;
-  return new Date(d) < new Date();
+  // 当日EODまでは期限切れとしない
+  const [y, m, day] = d.split("T")[0].split("-").map(Number);
+  return new Date(y, m - 1, day, 23, 59, 59) < new Date();
 }
 function periodText(task: Task) {
+  const sDay = task.startDate?.split("T")[0];
+  const eDay = task.dueDate?.split("T")[0];
   const s = formatDate(task.startDate);
   const e = formatDate(task.dueDate);
-  if (s && e) return `${s} → ${e}`;
-  if (s) return `${s} →`;
-  if (e) return `→ ${e}`;
+  // 同じ日 or 片方のみ → arrowなし
+  if (s && e && sDay !== eDay) return `${s} → ${e}`;
+  if (s) return s;
+  if (e) return e;
   return null;
 }
 // 4行以上 or 180文字以上の場合だけ展開ボタンを表示
