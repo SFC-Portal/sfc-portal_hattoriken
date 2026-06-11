@@ -96,22 +96,31 @@ class TaskService:
                 setattr(task, key, value)
 
         if new_status in ("done", "todo"):
-            self._cascade_status(task, new_status)
+            self._cascade_down(task, new_status)
 
-        if task.parent_id:
-            parent = self.db.query(Task).filter(Task.id == task.parent_id).first()
-            if parent and all(s.status == "done" for s in parent.sub_tasks):
-                parent.status = "done"
+        # 完了時: 上方向に再帰的に親を確認して自動完了
+        if new_status == "done":
+            self._propagate_done_up(task)
 
         task.updated_at = datetime.utcnow()
         self.db.commit()
         self.db.refresh(task)
         return task
 
-    def _cascade_status(self, task: Task, status: str) -> None:
+    def _cascade_down(self, task: Task, status: str) -> None:
+        """子・孫タスクすべてにステータスを伝播"""
         for sub in task.sub_tasks:
             sub.status = status
-            self._cascade_status(sub, status)
+            self._cascade_down(sub, status)
+
+    def _propagate_done_up(self, task: Task) -> None:
+        """全兄弟タスクが完了なら親も完了にし、さらに上へ再帰"""
+        if not task.parent_id:
+            return
+        parent = self.db.query(Task).filter(Task.id == task.parent_id).first()
+        if parent and all(s.status == "done" for s in parent.sub_tasks):
+            parent.status = "done"
+            self._propagate_done_up(parent)
 
     def delete_task(self, task_id: str, user_id: str) -> bool:
         task = self.get_task(task_id, user_id)

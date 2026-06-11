@@ -2,6 +2,7 @@
 
 import { useState, KeyboardEvent } from "react";
 import { useCreateTask, useUpdateTask } from "@/lib/hooks/useTasks";
+import { DateRangePicker } from "./DateRangePicker";
 import type { Task, TaskCreateInput, TaskPriority, TaskCategory } from "@/types/task";
 
 const PRIORITY_OPTIONS: { label: string; value: TaskPriority }[] = [
@@ -19,6 +20,11 @@ const CATEGORY_OPTIONS: { label: string; value: TaskCategory }[] = [
   { label: "その他", value: "other" },
 ];
 
+function toDateOnly(isoStr?: string) {
+  if (!isoStr) return undefined;
+  return isoStr.split("T")[0];
+}
+
 interface TaskFormProps {
   task?: Task;
   onSuccess?: () => void;
@@ -35,7 +41,8 @@ export function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
   const [form, setForm] = useState<TaskCreateInput>({
     title: task?.title ?? "",
     description: task?.description ?? "",
-    dueDate: task?.dueDate ? task.dueDate.split("T")[0] : "",
+    startDate: toDateOnly(task?.startDate),
+    dueDate: toDateOnly(task?.dueDate),
     priority: task?.priority ?? "medium",
     category: task?.category ?? "other",
     tags: task?.tags ?? [],
@@ -75,16 +82,14 @@ export function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
 
     const input: TaskCreateInput = {
       ...form,
+      startDate: form.startDate || undefined,
       dueDate: form.dueDate || undefined,
       description: form.description || undefined,
       tags: form.tags?.length ? form.tags : undefined,
     };
 
     if (isEdit) {
-      updateTask.mutate(
-        { id: task.id, input },
-        { onSuccess: () => onSuccess?.() }
-      );
+      updateTask.mutate({ id: task.id, input }, { onSuccess: () => onSuccess?.() });
     } else {
       createTask.mutate(input, { onSuccess: () => onSuccess?.() });
     }
@@ -120,20 +125,18 @@ export function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        {/* === 期限 === */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">期限</label>
-          <input
-            type="date"
-            name="dueDate"
-            value={form.dueDate}
-            onChange={handleChange}
-            className="input-base"
-          />
-        </div>
+      {/* === 期間（DateRangePicker） === */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">期間</label>
+        <DateRangePicker
+          startDate={form.startDate}
+          endDate={form.dueDate}
+          onChange={(s, e) => setForm((prev) => ({ ...prev, startDate: s, dueDate: e }))}
+        />
+      </div>
 
-        {/* === 優先度 === */}
+      {/* === 優先度 + カテゴリ === */}
+      <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">優先度</label>
           <select name="priority" value={form.priority} onChange={handleChange} className="input-base">
@@ -142,23 +145,23 @@ export function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
             ))}
           </select>
         </div>
-      </div>
-
-      {/* === カテゴリ === */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">カテゴリ</label>
-        <select name="category" value={form.category} onChange={handleChange} className="input-base">
-          {CATEGORY_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>{opt.label}</option>
-          ))}
-        </select>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">カテゴリ</label>
+          <select name="category" value={form.category} onChange={handleChange} className="input-base">
+            {CATEGORY_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* === タグ === */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">タグ</label>
-        <div className="input-base flex flex-wrap gap-1 cursor-text min-h-[42px]"
-          onClick={(e) => (e.currentTarget.querySelector("input") as HTMLInputElement)?.focus()}>
+        <div
+          className="input-base flex flex-wrap gap-1 cursor-text min-h-[42px]"
+          onClick={(e) => (e.currentTarget.querySelector("input") as HTMLInputElement)?.focus()}
+        >
           {form.tags?.map((tag) => (
             <span key={tag} className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 text-xs px-2 py-0.5 rounded-full">
               #{tag}

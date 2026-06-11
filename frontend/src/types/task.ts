@@ -12,6 +12,7 @@ export interface Task {
   description?: string;
   courseId?: string;
   courseName?: string;
+  startDate?: string;
   dueDate?: string;
   priority: TaskPriority;
   status: TaskStatus;
@@ -26,6 +27,7 @@ export interface TaskCreateInput {
   title: string;
   description?: string;
   courseId?: string;
+  startDate?: string;
   dueDate?: string;
   priority?: TaskPriority;
   category?: TaskCategory;
@@ -35,6 +37,7 @@ export interface TaskCreateInput {
 export interface TaskUpdateInput {
   title?: string;
   description?: string;
+  startDate?: string;
   dueDate?: string;
   priority?: TaskPriority;
   status?: TaskStatus;

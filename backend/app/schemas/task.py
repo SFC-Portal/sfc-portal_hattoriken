@@ -30,6 +30,7 @@ class TaskBase(BaseModel):
     title: str
     description: Optional[str] = None
     course_id: Optional[str] = None
+    start_date: Optional[datetime] = None
     due_date: Optional[datetime] = None
     priority: TaskPriority = TaskPriority.MEDIUM
     category: TaskCategory = TaskCategory.OTHER
@@ -43,6 +44,7 @@ class TaskCreate(TaskBase):
 class TaskUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
+    start_date: Optional[datetime] = None
     due_date: Optional[datetime] = None
     priority: Optional[TaskPriority] = None
     status: Optional[TaskStatus] = None

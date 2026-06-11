@@ -121,8 +121,15 @@ async def create_subtask(
     parent = service.get_task(task_id=task_id, user_id=user_id)
     if not parent:
         raise HTTPException(status_code=404, detail="Parent task not found")
-    data = task.model_dump()
+    # 明示的に指定されたフィールドのみ使用し、未指定は親から継承
+    data = task.model_dump(exclude_unset=True)
     data["parent_id"] = task_id
+    if "tags" not in data:
+        data["tags"] = parent.tags
+    if "priority" not in data:
+        data["priority"] = parent.priority
+    if "category" not in data:
+        data["category"] = parent.category
     return service.create_task(user_id=user_id, data=data)
 
 

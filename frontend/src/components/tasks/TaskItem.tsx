@@ -3,6 +3,7 @@
 import { Fragment, useState, useRef, useEffect, KeyboardEvent } from "react";
 import { useUpdateTask, useDeleteTask, useCreateSubtask } from "@/lib/hooks/useTasks";
 import { TaskForm } from "./TaskForm";
+import { DateRangePicker } from "./DateRangePicker";
 import type { Task, TaskPriority, TaskStatus } from "@/types/task";
 
 // === 定数 ===
@@ -27,19 +28,22 @@ function isOverdue(dateStr?: string, status?: TaskStatus) {
 }
 
 // === サブタスク追加フォーム ===
-function SubTaskAddRow({ parentId, onDone }: { parentId: string; onDone: () => void }) {
+function SubTaskAddForm({ parentId, onDone }: { parentId: string; onDone: () => void }) {
   const createSubtask = useCreateSubtask();
   const [title, setTitle] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [description, setDescription] = useState("");
+  const [startDate, setStartDate] = useState<string | undefined>();
+  const [dueDate, setDueDate] = useState<string | undefined>();
+  const titleRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { inputRef.current?.focus(); }, []);
+  useEffect(() => { titleRef.current?.focus(); }, []);
 
   function submit() {
     const t = title.trim();
-    if (!t) { onDone(); return; }
+    if (!t) return;
     createSubtask.mutate(
-      { parentId, input: { title: t } },
-      { onSuccess: () => { setTitle(""); onDone(); } },
+      { parentId, input: { title: t, description: description || undefined, startDate, dueDate } },
+      { onSuccess: onDone },
     );
   }
 
@@ -49,31 +53,53 @@ function SubTaskAddRow({ parentId, onDone }: { parentId: string; onDone: () => v
   }
 
   return (
-    <div className="flex items-center gap-2 py-1.5">
-      <div className="w-4 h-4 flex-shrink-0 rounded-full border-2 border-dashed border-gray-300" />
+    <div className="card p-4 space-y-3 border-sfc-lightBlue/40">
+      <p className="text-xs font-medium text-gray-500">サブタスクを追加</p>
+
       <input
-        ref={inputRef}
+        ref={titleRef}
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="タスク名を入力…"
+        placeholder="タスク名 *"
         disabled={createSubtask.isPending}
-        className="flex-1 text-sm outline-none bg-transparent placeholder:text-gray-400 text-gray-700 border-b border-gray-200 focus:border-sfc-blue transition-colors pb-0.5"
+        className="input-base w-full"
       />
-      <button
-        onClick={submit}
-        disabled={!title.trim() || createSubtask.isPending}
-        className="text-xs px-2 py-1 rounded bg-sfc-blue text-white disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
-      >
-        追加
-      </button>
-      <button
-        type="button"
-        onClick={onDone}
-        className="text-xs text-gray-400 hover:text-gray-600 flex-shrink-0"
-      >
-        ✕
-      </button>
+
+      <textarea
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
+        placeholder="説明（任意）"
+        rows={2}
+        disabled={createSubtask.isPending}
+        className="input-base w-full resize-none text-sm"
+      />
+
+      <div>
+        <label className="block text-xs font-medium text-gray-600 mb-1">期間</label>
+        <DateRangePicker
+          startDate={startDate}
+          endDate={dueDate}
+          onChange={(s, e) => { setStartDate(s); setDueDate(e); }}
+        />
+      </div>
+
+      <p className="text-xs text-gray-400">優先度・タグ・カテゴリは親タスクから自動的に引き継ぎます</p>
+
+      <div className="flex gap-2 justify-end pt-1">
+        <button type="button" onClick={onDone}
+          className="text-sm text-gray-500 hover:text-gray-700 px-3 py-1.5 transition-colors">
+          キャンセル
+        </button>
+        <button
+          type="button"
+          onClick={submit}
+          disabled={!title.trim() || createSubtask.isPending}
+          className="btn-primary text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          {createSubtask.isPending ? "追加中…" : "追加"}
+        </button>
+      </div>
     </div>
   );
 }
@@ -166,9 +192,13 @@ function TaskCard({ task, depth, breadcrumb }: TaskCardProps) {
               {task.title}
             </p>
             <div className="flex items-center gap-2 mt-1 flex-wrap">
-              {task.dueDate && (
+              {(task.startDate || task.dueDate) && (
                 <span className={`text-xs ${overdue ? "text-red-600 font-medium" : "text-gray-500"}`}>
-                  {overdue ? "期限切れ " : "期限 "}{formatDate(task.dueDate)}
+                  {task.startDate && task.dueDate
+                    ? `${formatDate(task.startDate)} → ${overdue ? "期限切れ " : ""}${formatDate(task.dueDate)}`
+                    : task.startDate
+                    ? `${formatDate(task.startDate)} →`
+                    : `${overdue ? "期限切れ " : "期限 "}${formatDate(task.dueDate)}`}
                 </span>
               )}
               {task.courseName && (
@@ -289,7 +319,7 @@ function TaskCard({ task, depth, breadcrumb }: TaskCardProps) {
           {/* インライン追加フォーム */}
           {showAddSubtask && (
             <div className="mt-2 pl-8">
-              <SubTaskAddRow parentId={task.id} onDone={() => setShowAddSubtask(false)} />
+              <SubTaskAddForm parentId={task.id} onDone={() => setShowAddSubtask(false)} />
             </div>
           )}
         </div>

@@ -35,6 +35,7 @@ class Task(Base):
     title = Column(String, nullable=False)
     description = Column(Text, nullable=True)
     course_id = Column(String, ForeignKey("courses.id"), nullable=True, index=True)
+    start_date = Column(DateTime(timezone=True), nullable=True)
     due_date = Column(DateTime(timezone=True), nullable=True)
     priority = Column(Enum(*[e.value for e in TaskPriority], name="task_priority"), default=TaskPriority.MEDIUM)
     status = Column(Enum(*[e.value for e in TaskStatus], name="task_status"), default=TaskStatus.TODO)
