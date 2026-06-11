@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getTasks, getTask, createTask, updateTask, deleteTask, createSubtask } from "@/lib/api/tasks";
+import { getTasks, getTask, createTask, updateTask, deleteTask, createSubtask, getAvailableTags } from "@/lib/api/tasks";
 import type { Task, TaskCreateInput, TaskUpdateInput, TaskFilters } from "@/types/task";
 
 export function useTasks(filters?: TaskFilters, page = 1, limit = 20) {
@@ -51,6 +51,14 @@ export function useDeleteTask() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
     },
+  });
+}
+
+export function useAvailableTags() {
+  return useQuery({
+    queryKey: ["tasks", "tags"],
+    queryFn: getAvailableTags,
+    staleTime: 5 * 60 * 1000,
   });
 }
 

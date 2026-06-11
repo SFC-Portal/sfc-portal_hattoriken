@@ -130,6 +130,17 @@ class TaskService:
         self.db.commit()
         return True
 
+    def get_tags(self, user_id: str) -> list:
+        from sqlalchemy import text
+        result = self.db.execute(
+            text(
+                "SELECT DISTINCT unnest(tags) AS tag FROM tasks "
+                "WHERE user_id = :uid AND tags IS NOT NULL ORDER BY 1"
+            ),
+            {"uid": user_id},
+        ).fetchall()
+        return [r[0] for r in result if r[0]]
+
     def get_tasks_by_course(self, course_id: str, user_id: str) -> List[Task]:
         return (
             self.db.query(Task)

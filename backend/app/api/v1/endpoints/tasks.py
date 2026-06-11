@@ -67,6 +67,16 @@ async def create_task(
     return service.create_task(user_id=user_id, data=task.model_dump())
 
 
+@router.get("/tags", response_model=list[str])
+async def get_tags(
+    user_id: str = Depends(get_user_id),
+    db: Session = Depends(get_db),
+):
+    """Get all unique tags used by the user"""
+    service = TaskService(db)
+    return service.get_tags(user_id=user_id)
+
+
 @router.get("/course/{course_id}", response_model=list[TaskResponse])
 async def get_tasks_by_course(
     course_id: str,

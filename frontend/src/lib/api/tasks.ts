@@ -51,3 +51,8 @@ export async function createSubtask(parentId: string, input: TaskCreateInput): P
   const { data } = await apiClient.post(`/tasks/${parentId}/subtasks`, input);
   return data;
 }
+
+export async function getAvailableTags(): Promise<string[]> {
+  const { data } = await apiClient.get("/tasks/tags");
+  return data;
+}

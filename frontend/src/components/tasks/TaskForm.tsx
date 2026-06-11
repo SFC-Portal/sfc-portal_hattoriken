@@ -1,23 +1,16 @@
 "use client";
 
-import { useState, KeyboardEvent } from "react";
+import { useState } from "react";
 import { useCreateTask, useUpdateTask } from "@/lib/hooks/useTasks";
 import { DateRangePicker } from "./DateRangePicker";
-import type { Task, TaskCreateInput, TaskPriority, TaskCategory } from "@/types/task";
+import { TagSelector } from "./TagSelector";
+import type { Task, TaskCreateInput, TaskPriority } from "@/types/task";
 
 const PRIORITY_OPTIONS: { label: string; value: TaskPriority }[] = [
   { label: "低", value: "low" },
   { label: "中", value: "medium" },
   { label: "高", value: "high" },
   { label: "緊急", value: "urgent" },
-];
-
-const CATEGORY_OPTIONS: { label: string; value: TaskCategory }[] = [
-  { label: "課題", value: "assignment" },
-  { label: "試験", value: "exam" },
-  { label: "プロジェクト", value: "project" },
-  { label: "読書", value: "reading" },
-  { label: "その他", value: "other" },
 ];
 
 function toDateOnly(isoStr?: string) {
@@ -44,36 +37,13 @@ export function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
     startDate: toDateOnly(task?.startDate),
     dueDate: toDateOnly(task?.dueDate),
     priority: task?.priority ?? "medium",
-    category: task?.category ?? "other",
     tags: task?.tags ?? [],
   });
-
-  const [tagInput, setTagInput] = useState("");
 
   function handleChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-  }
-
-  function addTag() {
-    const t = tagInput.trim().replace(/^#/, "");
-    if (!t || form.tags?.includes(t)) return;
-    setForm((prev) => ({ ...prev, tags: [...(prev.tags ?? []), t] }));
-    setTagInput("");
-  }
-
-  function removeTag(tag: string) {
-    setForm((prev) => ({ ...prev, tags: prev.tags?.filter((t) => t !== tag) }));
-  }
-
-  function handleTagKeyDown(e: KeyboardEvent<HTMLInputElement>) {
-    if (e.key === "Enter" || e.key === ",") {
-      e.preventDefault();
-      addTag();
-    } else if (e.key === "Backspace" && !tagInput && form.tags?.length) {
-      removeTag(form.tags[form.tags.length - 1]);
-    }
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -125,7 +95,7 @@ export function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
         />
       </div>
 
-      {/* === 期間（DateRangePicker） === */}
+      {/* === 期間 === */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">期間</label>
         <DateRangePicker
@@ -135,48 +105,24 @@ export function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
         />
       </div>
 
-      {/* === 優先度 + カテゴリ === */}
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">優先度</label>
-          <select name="priority" value={form.priority} onChange={handleChange} className="input-base">
-            {PRIORITY_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">カテゴリ</label>
-          <select name="category" value={form.category} onChange={handleChange} className="input-base">
-            {CATEGORY_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
-        </div>
+      {/* === 優先度 === */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">優先度</label>
+        <select name="priority" value={form.priority} onChange={handleChange} className="input-base">
+          {PRIORITY_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
       </div>
 
       {/* === タグ === */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">タグ</label>
-        <div
-          className="input-base flex flex-wrap gap-1 cursor-text min-h-[42px]"
-          onClick={(e) => (e.currentTarget.querySelector("input") as HTMLInputElement)?.focus()}
-        >
-          {form.tags?.map((tag) => (
-            <span key={tag} className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 text-xs px-2 py-0.5 rounded-full">
-              #{tag}
-              <button type="button" onClick={() => removeTag(tag)} className="hover:text-red-500 leading-none">×</button>
-            </span>
-          ))}
-          <input
-            value={tagInput}
-            onChange={(e) => setTagInput(e.target.value)}
-            onKeyDown={handleTagKeyDown}
-            placeholder={form.tags?.length ? "" : "タグを入力してEnter"}
-            className="flex-1 min-w-[120px] outline-none text-sm bg-transparent"
-          />
-        </div>
-        <p className="text-xs text-gray-400 mt-1">Enterまたはカンマで追加</p>
+        <TagSelector
+          selected={form.tags ?? []}
+          onChange={(tags) => setForm((prev) => ({ ...prev, tags }))}
+        />
+        <p className="text-xs text-gray-400 mt-1">既存タグを選択、または新しいタグを入力して作成</p>
       </div>
 
       {/* === ボタン === */}
