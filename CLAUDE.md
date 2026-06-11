@@ -98,8 +98,9 @@ CLAUDE.local.md
 ## コマンド
 
 ```bash
-# 開発サーバー（フロント・バック同時起動）
-./scripts/dev.sh
+# === 開発サーバー ===
+./scripts/start.sh          # フロント・バック同時起動
+./scripts/stop.sh           # 別ターミナルから停止（Ctrl+C でも可）
 
 # フロントエンド個別
 cd frontend && npm run dev    # 開発サーバー
@@ -110,6 +111,8 @@ cd frontend && npm run lint   # Lint
 cd backend && source venv/bin/activate
 uvicorn app.main:app --reload
 ```
+
+> **Ctrl+C vs stop.sh**: `start.sh` を起動したターミナルで Ctrl+C を押すのと `stop.sh` を実行するのは等価。ターミナルを閉じた場合や別セッションから止めたいときは `stop.sh` を使う。
 
 ## アーキテクチャ
 
@@ -170,13 +173,24 @@ page.tsx → components/ → hooks/ → api/ → types/
 
 ## 機能モジュール
 
-| 機能     | パス         | 状態   |
-| -------- | ------------ | ------ |
-| シラバス | `/syllabus`  | スタブ |
-| 時間割   | `/timetable` | スタブ |
-| タスク   | `/tasks`     | スタブ |
-| SNS      | `/sns`       | スタブ |
-| バス     | `/bus`       | スタブ |
+| 機能     | パス         | 状態                              |
+| -------- | ------------ | --------------------------------- |
+| シラバス | `/syllabus`  | スタブ                            |
+| 時間割   | `/timetable` | スタブ                            |
+| タスク   | `/tasks`     | 実装済み（PR #7）、AI細分化は未実装 |
+| SNS      | `/sns`       | スタブ                            |
+| バス     | `/bus`       | スタブ                            |
+
+### DBスキーマ変更時の注意
+
+このプロジェクトはAlembicによる自動マイグレーションを使用していない。`models/` を変更した場合は、対応するSQLをSupabase SQL Editorで手動実行すること。実施済みのマイグレーション：
+
+```sql
+-- tasksテーブルにサブタスク・開始日カラムを追加（実施済み）
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS parent_id VARCHAR REFERENCES tasks(id);
+CREATE INDEX IF NOT EXISTS idx_tasks_parent_id ON tasks(parent_id);
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS start_date TIMESTAMPTZ;
+```
 
 ## カスタムコマンド
 
