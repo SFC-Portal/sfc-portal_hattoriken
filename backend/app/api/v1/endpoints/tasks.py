@@ -67,6 +67,16 @@ async def create_task(
     return service.create_task(user_id=user_id, data=task.model_dump())
 
 
+@router.get("/tags", response_model=list[str])
+async def get_tags(
+    user_id: str = Depends(get_user_id),
+    db: Session = Depends(get_db),
+):
+    """Get all unique tags used by the user"""
+    service = TaskService(db)
+    return service.get_tags(user_id=user_id)
+
+
 @router.get("/course/{course_id}", response_model=list[TaskResponse])
 async def get_tasks_by_course(
     course_id: str,
@@ -109,13 +119,37 @@ async def update_task(
     return task
 
 
+@router.post("/{task_id}/subtasks", response_model=TaskResponse)
+async def create_subtask(
+    task_id: str,
+    task: TaskCreate,
+    user_id: str = Depends(get_user_id),
+    db: Session = Depends(get_db),
+):
+    """Create a subtask under a parent task"""
+    service = TaskService(db)
+    parent = service.get_task(task_id=task_id, user_id=user_id)
+    if not parent:
+        raise HTTPException(status_code=404, detail="Parent task not found")
+    # 明示的に指定されたフィールドのみ使用し、未指定は親から継承
+    data = task.model_dump(exclude_unset=True)
+    data["parent_id"] = task_id
+    if "tags" not in data:
+        data["tags"] = parent.tags
+    if "priority" not in data:
+        data["priority"] = parent.priority
+    if "category" not in data:
+        data["category"] = parent.category
+    return service.create_task(user_id=user_id, data=data)
+
+
 @router.delete("/{task_id}", status_code=204)
 async def delete_task(
     task_id: str,
     user_id: str = Depends(get_user_id),
     db: Session = Depends(get_db),
 ):
-    """Delete a task"""
+    """Delete a task (and all subtasks)"""
     service = TaskService(db)
     deleted = service.delete_task(task_id=task_id, user_id=user_id)
     if not deleted:

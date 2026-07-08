@@ -30,6 +30,7 @@ class TaskBase(BaseModel):
     title: str
     description: Optional[str] = None
     course_id: Optional[str] = None
+    start_date: Optional[datetime] = None
     due_date: Optional[datetime] = None
     priority: TaskPriority = TaskPriority.MEDIUM
     category: TaskCategory = TaskCategory.OTHER
@@ -37,12 +38,13 @@ class TaskBase(BaseModel):
 
 
 class TaskCreate(TaskBase):
-    pass
+    parent_id: Optional[str] = None
 
 
 class TaskUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
+    start_date: Optional[datetime] = None
     due_date: Optional[datetime] = None
     priority: Optional[TaskPriority] = None
     status: Optional[TaskStatus] = None
@@ -53,12 +55,17 @@ class TaskUpdate(BaseModel):
 class TaskResponse(TaskBase):
     id: str
     user_id: str
+    parent_id: Optional[str] = None
     course_name: Optional[str] = None
     status: TaskStatus
+    sub_tasks: List["TaskResponse"] = []
     created_at: datetime
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+TaskResponse.model_rebuild()
 
 
 class TaskListResponse(BaseModel):

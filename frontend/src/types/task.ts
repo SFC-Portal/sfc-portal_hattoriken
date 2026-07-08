@@ -7,15 +7,18 @@ export type TaskCategory = "assignment" | "exam" | "project" | "reading" | "othe
 export interface Task {
   id: string;
   userId: string;
+  parentId?: string;
   title: string;
   description?: string;
   courseId?: string;
   courseName?: string;
+  startDate?: string;
   dueDate?: string;
   priority: TaskPriority;
   status: TaskStatus;
   category: TaskCategory;
   tags?: string[];
+  subTasks?: Task[];
   createdAt: string;
   updatedAt: string;
 }
@@ -24,6 +27,7 @@ export interface TaskCreateInput {
   title: string;
   description?: string;
   courseId?: string;
+  startDate?: string;
   dueDate?: string;
   priority?: TaskPriority;
   category?: TaskCategory;
@@ -33,6 +37,7 @@ export interface TaskCreateInput {
 export interface TaskUpdateInput {
   title?: string;
   description?: string;
+  startDate?: string;
   dueDate?: string;
   priority?: TaskPriority;
   status?: TaskStatus;
