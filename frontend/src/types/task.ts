@@ -40,6 +40,9 @@ export interface TaskUpdateInput {
   tags?: string[];
 }
 
+export type TaskSortBy = "due_date" | "priority" | "created_at";
+export type TaskSortOrder = "asc" | "desc";
+
 export interface TaskFilters {
   status?: TaskStatus;
   priority?: TaskPriority;
@@ -47,4 +50,6 @@ export interface TaskFilters {
   courseId?: string;
   dueBefore?: string;
   dueAfter?: string;
+  sortBy?: TaskSortBy;
+  sortOrder?: TaskSortOrder;
 }
