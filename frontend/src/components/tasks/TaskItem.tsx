@@ -1,7 +1,8 @@
 "use client";
 
 import { Fragment, useState, useRef, useEffect, KeyboardEvent } from "react";
-import { useUpdateTask, useDeleteTask, useCreateSubtask } from "@/lib/hooks/useTasks";
+import axios from "axios";
+import { useUpdateTask, useDeleteTask, useCreateSubtask, useSubdivideTask } from "@/lib/hooks/useTasks";
 import { TaskForm } from "./TaskForm";
 import { DateRangePicker } from "./DateRangePicker";
 import type { Task, TaskPriority, TaskStatus } from "@/types/task";
@@ -68,7 +69,7 @@ function SubTaskAddForm({ parentId, onDone }: { parentId: string; onDone: () => 
 
   return (
     <div className="card p-4 space-y-3">
-      <p className="text-xs font-medium text-gray-500">サブタスクを追加</p>
+      <p className="text-sm font-medium text-gray-600">サブタスクを追加</p>
       <input
         ref={titleRef}
         value={title}
@@ -97,7 +98,7 @@ function SubTaskAddForm({ parentId, onDone }: { parentId: string; onDone: () => 
           onChange={(s, e) => { setStartDate(s); setDueDate(e); }}
         />
       </div>
-      <p className="text-xs text-gray-400">優先度・タグ・カテゴリは親タスクから自動引き継ぎ</p>
+      <p className="text-sm text-gray-500">優先度・タグ・カテゴリは親タスクから自動引き継ぎ</p>
       <div className="flex gap-2 justify-end pt-1">
         <button type="button" onClick={onDone}
           className="text-sm text-gray-500 hover:text-gray-700 px-3 py-1.5">キャンセル</button>
@@ -128,14 +129,14 @@ function ActiveButton({ task }: { task: Task }) {
       onClick={toggle}
       disabled={updateTask.isPending}
       title={isActive ? "進行中（クリックで停止）" : "開始する"}
-      className={`flex-shrink-0 flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border transition-all ${
+      className={`flex-shrink-0 flex items-center gap-1 text-sm font-medium px-2.5 py-1 rounded-full border transition-all ${
         isActive
           ? "bg-sfc-blue text-white border-sfc-blue"
-          : "text-gray-400 border-gray-200 hover:border-sfc-blue hover:text-sfc-blue"
+          : "text-gray-500 border-gray-200 hover:border-sfc-blue hover:text-sfc-blue"
       }`}
     >
       <svg
-        className="w-2.5 h-2.5"
+        className="w-3 h-3"
         fill={isActive ? "currentColor" : "none"}
         viewBox="0 0 24 24"
         stroke="currentColor"
@@ -159,6 +160,7 @@ interface TaskCardProps {
 function TaskCard({ task, depth, breadcrumb }: TaskCardProps) {
   const updateTask = useUpdateTask();
   const deleteTask = useDeleteTask();
+  const subdivideTask = useSubdivideTask();
   const [descExpanded, setDescExpanded] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [subtasksOpen, setSubtasksOpen] = useState(false);
@@ -193,6 +195,19 @@ function TaskCard({ task, depth, breadcrumb }: TaskCardProps) {
     setShowAddSubtask(true);
   }
 
+  function handleSubdivideClick(e: React.MouseEvent) {
+    e.stopPropagation();
+    setSubtasksOpen(true);
+    subdivideTask.mutate(task.id, {
+      onError: (err) => {
+        const detail = axios.isAxiosError(err)
+          ? (err.response?.data as { detail?: string } | undefined)?.detail
+          : undefined;
+        window.alert(detail || "AI細分化に失敗しました");
+      },
+    });
+  }
+
   const childBreadcrumb = [...breadcrumb, task.title];
   const isMinimal = depth > 0 && !cardExpanded;
 
@@ -205,10 +220,10 @@ function TaskCard({ task, depth, breadcrumb }: TaskCardProps) {
         {/* === パンくず (サブタスクのみ) === */}
         {depth > 0 && (
           <div className="px-4 pt-2.5 flex items-center justify-between min-w-0">
-            <div className="flex items-center gap-1 text-xs text-gray-400 min-w-0 overflow-hidden">
+            <div className="flex items-center gap-1 text-xs text-gray-500 min-w-0 overflow-hidden">
               {breadcrumb.map((t, i) => (
                 <Fragment key={i}>
-                  {i > 0 && <span className="flex-shrink-0 text-gray-300">›</span>}
+                  {i > 0 && <span className="flex-shrink-0 text-gray-400">›</span>}
                   <span className="truncate max-w-[7rem]">{t}</span>
                 </Fragment>
               ))}
@@ -217,7 +232,7 @@ function TaskCard({ task, depth, breadcrumb }: TaskCardProps) {
             {cardExpanded && (
               <button
                 onClick={(e) => { e.stopPropagation(); setCardExpanded(false); }}
-                className="flex-shrink-0 text-gray-300 hover:text-gray-500 transition-colors ml-2"
+                className="flex-shrink-0 text-gray-400 hover:text-gray-600 transition-colors ml-2"
                 title="折りたたむ"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -251,7 +266,7 @@ function TaskCard({ task, depth, breadcrumb }: TaskCardProps) {
                 {task.title}
               </p>
               {period && (
-                <span className={`text-xs ${overdue ? "text-red-500 font-medium" : "text-gray-400"}`}>
+                <span className={`text-sm ${overdue ? "text-red-500 font-medium" : "text-gray-500"}`}>
                   {overdue ? "期限切れ " : ""}{period}
                 </span>
               )}
@@ -286,15 +301,15 @@ function TaskCard({ task, depth, breadcrumb }: TaskCardProps) {
               </p>
               <div className="flex items-center gap-2 mt-1 flex-wrap">
                 {period && (
-                  <span className={`text-xs ${overdue ? "text-red-600 font-medium" : "text-gray-500"}`}>
+                  <span className={`text-sm ${overdue ? "text-red-600 font-medium" : "text-gray-600"}`}>
                     {overdue ? "期限切れ " : ""}{period}
                   </span>
                 )}
                 {task.courseName && (
-                  <span className="text-xs text-gray-400">{task.courseName}</span>
+                  <span className="text-sm text-gray-500">{task.courseName}</span>
                 )}
                 {task.tags?.map((tag) => (
-                  <span key={tag} className="text-xs bg-sfc-blue/10 text-sfc-blue px-1.5 py-0.5 rounded-full font-medium">
+                  <span key={tag} className="text-sm bg-sfc-blue/10 text-sfc-blue px-1.5 py-0.5 rounded-full font-medium">
                     #{tag}
                   </span>
                 ))}
@@ -310,7 +325,7 @@ function TaskCard({ task, depth, breadcrumb }: TaskCardProps) {
                   {showExpandToggle && (
                     <button
                       onClick={(e) => { e.stopPropagation(); setDescExpanded((v) => !v); }}
-                      className="mt-1 text-xs text-gray-400 hover:text-gray-600 transition-colors"
+                      className="mt-1 text-sm text-gray-500 hover:text-gray-700 transition-colors"
                     >
                       {descExpanded ? "折りたたむ ↑" : "すべて表示 ↓"}
                     </button>
@@ -322,12 +337,12 @@ function TaskCard({ task, depth, breadcrumb }: TaskCardProps) {
             {/* 右側: 状態ボタン・優先度・編集・削除 */}
             <div className="flex items-center gap-1.5 flex-shrink-0">
               <ActiveButton task={task} />
-              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${PRIORITY_STYLES[task.priority]}`}>
+              <span className={`text-sm px-2 py-0.5 rounded-full font-medium ${PRIORITY_STYLES[task.priority]}`}>
                 {PRIORITY_LABELS[task.priority]}
               </span>
               <button
                 onClick={(e) => { e.stopPropagation(); setShowEdit(true); }}
-                className="text-gray-300 hover:text-sfc-blue transition-colors"
+                className="text-gray-400 hover:text-sfc-blue transition-colors"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -336,7 +351,7 @@ function TaskCard({ task, depth, breadcrumb }: TaskCardProps) {
               <button
                 onClick={handleDelete}
                 disabled={deleteTask.isPending}
-                className="text-gray-300 hover:text-red-400 transition-colors"
+                className="text-gray-400 hover:text-red-400 transition-colors"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -355,7 +370,7 @@ function TaskCard({ task, depth, breadcrumb }: TaskCardProps) {
             {subTaskCount > 0 ? (
               <button
                 onClick={() => setSubtasksOpen((v) => !v)}
-                className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 transition-colors"
+                className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-800 transition-colors"
               >
                 <svg
                   className={`w-3 h-3 transition-transform ${subtasksOpen ? "rotate-90" : ""}`}
@@ -374,18 +389,31 @@ function TaskCard({ task, depth, breadcrumb }: TaskCardProps) {
                 </span>
               </button>
             ) : (
-              <span className="text-xs text-gray-400">サブタスクなし</span>
+              <span className="text-sm text-gray-500">サブタスクなし</span>
             )}
             {!isDone && (
-              <button
-                onClick={handleAddSubtaskClick}
-                className="text-xs text-gray-400 hover:text-sfc-blue transition-colors flex items-center gap-1"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-                </svg>
-                追加
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleSubdivideClick}
+                  disabled={subdivideTask.isPending}
+                  title="AIでサブタスクに分割"
+                  className="text-sm font-medium text-gray-600 hover:text-sfc-blue transition-colors flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:text-gray-600"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z" />
+                  </svg>
+                  {subdivideTask.isPending ? "生成中…" : "AI細分化"}
+                </button>
+                <button
+                  onClick={handleAddSubtaskClick}
+                  className="text-sm font-medium text-gray-600 hover:text-sfc-blue transition-colors flex items-center gap-1.5"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                  </svg>
+                  追加
+                </button>
+              </div>
             )}
           </div>
 
