@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.services.task_service import TaskService
+from app.services.gemini_service import GeminiServiceError
 from app.schemas.task import (
     TaskResponse,
     TaskCreate,
@@ -141,6 +142,25 @@ async def create_subtask(
     if "category" not in data:
         data["category"] = parent.category
     return service.create_task(user_id=user_id, data=data)
+
+
+@router.post("/{task_id}/subdivide", response_model=list[TaskResponse])
+async def subdivide_task(
+    task_id: str,
+    user_id: str = Depends(get_user_id),
+    db: Session = Depends(get_db),
+):
+    """AIで親タスクをサブタスクに自動分割"""
+    service = TaskService(db)
+    parent = service.get_task(task_id=task_id, user_id=user_id)
+    if not parent:
+        raise HTTPException(status_code=404, detail="Task not found")
+    if parent.status == "done":
+        raise HTTPException(status_code=400, detail="完了済みタスクは細分化できません")
+    try:
+        return await service.subdivide_task(parent)
+    except GeminiServiceError as e:
+        raise HTTPException(status_code=502, detail=str(e))
 
 
 @router.delete("/{task_id}", status_code=204)

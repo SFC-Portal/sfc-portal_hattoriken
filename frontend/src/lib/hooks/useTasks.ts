@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getTasks, getTask, createTask, updateTask, deleteTask, createSubtask, getAvailableTags } from "@/lib/api/tasks";
+import { getTasks, getTask, createTask, updateTask, deleteTask, createSubtask, getAvailableTags, subdivideTask } from "@/lib/api/tasks";
 import type { Task, TaskCreateInput, TaskUpdateInput, TaskFilters } from "@/types/task";
 
 export function useTasks(filters?: TaskFilters, page = 1, limit = 20) {
@@ -68,6 +68,17 @@ export function useCreateSubtask() {
   return useMutation({
     mutationFn: ({ parentId, input }: { parentId: string; input: TaskCreateInput }) =>
       createSubtask(parentId, input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    },
+  });
+}
+
+export function useSubdivideTask() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => subdivideTask(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
     },

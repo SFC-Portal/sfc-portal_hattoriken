@@ -56,3 +56,9 @@ export async function getAvailableTags(): Promise<string[]> {
   const { data } = await apiClient.get("/tasks/tags");
   return data;
 }
+
+export async function subdivideTask(id: string): Promise<Task[]> {
+  // AI生成はバックエンド側で最大25秒待つため、余裕を持ったタイムアウトを設定
+  const { data } = await apiClient.post(`/tasks/${id}/subdivide`, undefined, { timeout: 35000 });
+  return data;
+}

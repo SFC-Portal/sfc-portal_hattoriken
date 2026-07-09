@@ -1,10 +1,11 @@
 from typing import Optional, List
 from sqlalchemy.orm import Session
 from sqlalchemy import asc, desc
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid
 
 from app.models.task import Task
+from app.services.gemini_service import generate_subtask_suggestions
 
 _SORT_COLUMNS = {
     "due_date": Task.due_date,
@@ -129,6 +130,66 @@ class TaskService:
         self.db.delete(task)
         self.db.commit()
         return True
+
+    async def subdivide_task(self, parent: Task) -> List[Task]:
+        """AIで親タスクをサブタスクに自動分割"""
+        has_start = parent.start_date is not None
+        has_due = parent.due_date is not None
+
+        # 期限未設定の場合は今日を期限とみなし、開始日未設定の場合は
+        # 今日（期限が既に過ぎていれば期限日）を開始日として扱う。
+        # これはAIへの個数指示（1日/2〜4日/それ以上）を組み立てるためだけに使い、
+        # 実際に保存するサブタスクの日付は下記の分岐で親の設定状況に応じて決める
+        now = datetime.now(timezone.utc)
+        effective_due = parent.due_date or now
+        effective_start = parent.start_date or min(now, effective_due)
+
+        suggestions = await generate_subtask_suggestions(parent, effective_start, effective_due)
+
+        # 親が日付を1つも設定していなければサブタスクにも日付を付けない。
+        # 片方だけ設定していればサブタスク全件をその1つの日付に揃える。
+        # 両方設定していれば従来どおりAIが提案した個別の期間を（範囲内に収めて）使う
+        if not has_start and not has_due:
+            date_mode = "none"
+        elif has_start != has_due:
+            date_mode = "single"
+            single_date = parent.start_date if has_start else parent.due_date
+        else:
+            date_mode = "range"
+
+        created = []
+        for s in suggestions:
+            if date_mode == "none":
+                start_date = None
+                due_date = None
+            elif date_mode == "single":
+                start_date = single_date
+                due_date = single_date
+            else:
+                start_date = self._parse_date(s.get("start_date"), effective_start)
+                due_date = self._parse_date(s.get("due_date"), effective_due)
+
+            data = {
+                "title": s.get("title") or "新規サブタスク",
+                "description": s.get("description"),
+                "start_date": start_date,
+                "due_date": due_date,
+                "parent_id": parent.id,
+                "tags": parent.tags,
+                "priority": parent.priority,
+                "category": parent.category,
+            }
+            created.append(self.create_task(user_id=parent.user_id, data=data))
+        return created
+
+    @staticmethod
+    def _parse_date(value, fallback):
+        if not value:
+            return fallback
+        try:
+            return datetime.fromisoformat(value)
+        except (TypeError, ValueError):
+            return fallback
 
     def get_tags(self, user_id: str) -> list:
         from sqlalchemy import text

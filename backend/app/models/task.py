@@ -52,6 +52,7 @@ class Task(Base):
         back_populates="parent",
         cascade="all, delete-orphan",
         lazy="selectin",
+        order_by="Task.created_at",
     )
     parent = relationship(
         "Task",

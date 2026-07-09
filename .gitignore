@@ -38,3 +38,9 @@ supabase/.temp/
 .claude/settings.local.json
 CLAUDE.local.md
 .claude/memory.md
+
+# === 旧タスク管理アプリ（参照用、移植完了後に削除予定） ===
+frontend/src/app/tasks/old-taskmanager/
+
+# === 個人用ファイル（振り返りメモ等、今後もここに追加） ===
+.claude/private/
