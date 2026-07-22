@@ -216,10 +216,14 @@ function TaskCard({ task, depth, breadcrumb }: TaskCardProps) {
         if (axios.isAxiosError(err) && err.response?.status === 429) {
           const retryAfter = Number(err.response.headers["retry-after"]) || 3600;
           const scope = err.response.headers["x-ratelimit-scope"];
-          if (scope === "api") {
+          // scope="ip"（API全体への簡易フラッド対策）はこのユーザー個人のAI利用制限ではないため、
+          // 誤って「利用制限中」表示にしない。user/api以外は汎用エラーとして扱う
+          if (scope === "user") {
+            setUserRateLimited(retryAfter);
+          } else if (scope === "api") {
             setApiRateLimited(retryAfter);
           } else {
-            setUserRateLimited(retryAfter);
+            window.alert("リクエストが多すぎます。しばらく待ってから再度お試しください。");
           }
           return;
         }

@@ -187,9 +187,12 @@ class TaskService:
         if not value:
             return fallback
         try:
-            return datetime.fromisoformat(value)
+            parsed = datetime.fromisoformat(value)
         except (TypeError, ValueError):
             return fallback
+        # Geminiは日付のみ（YYYY-MM-DD）を返すためnaive datetimeになる。
+        # due_date/start_dateはtimezone-aware列なのでUTCとして明示する
+        return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
 
     def get_tags(self, user_id: str) -> list:
         from sqlalchemy import text

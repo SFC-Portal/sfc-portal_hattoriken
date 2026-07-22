@@ -54,10 +54,13 @@ async def delete_account(
 @router.get("/users/{user_id}/profile", response_model=UserProfileResponse)
 async def get_user_profile(
     user_id: str,
-    _: str = Depends(get_current_user_id),
+    current_user_id: str = Depends(get_current_user_id),
     db: Session = Depends(get_db),
 ):
-    """Get user profile by ID"""
+    """Get user profile by ID（現状は自分自身のみ。他ユーザーのプロフィール閲覧はSNS機能実装時に
+    公開範囲を設計した上で許可する）"""
+    if user_id != current_user_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
     user = db.get(User, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
