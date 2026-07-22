@@ -5,6 +5,7 @@ from typing import List
 class Settings(BaseSettings):
     supabase_url: str = ""
     supabase_key: str = ""
+    supabase_jwt_audience: str = "authenticated"
     database_url: str = ""
     secret_key: str = "change-me"
     cors_origins: List[str] = ["http://localhost:3000"]

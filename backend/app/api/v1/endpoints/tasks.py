@@ -1,7 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, Header
+from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import Optional
 from sqlalchemy.orm import Session
 
+from app.api.deps import require_registered_user_id
+from app.core.config import settings
+from app.core.rate_limit import subdivide_limiter
 from app.db.session import get_db
 from app.services.task_service import TaskService
 from app.services.gemini_service import GeminiServiceError
@@ -17,13 +20,6 @@ from app.schemas.task import (
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
-# TODO: replace with real auth dependency once Supabase Auth is wired up
-DEV_USER_ID = "00000000-0000-0000-0000-000000000001"
-
-
-def get_user_id(x_user_id: Optional[str] = Header(None)) -> str:
-    return x_user_id or DEV_USER_ID
-
 
 @router.get("", response_model=TaskListResponse)
 async def get_tasks(
@@ -37,7 +33,7 @@ async def get_tasks(
     sort_order: Optional[str] = Query("asc", pattern="^(asc|desc)$"),
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
-    user_id: str = Depends(get_user_id),
+    user_id: str = Depends(require_registered_user_id),
     db: Session = Depends(get_db),
 ):
     """Get list of tasks with optional filters"""
@@ -60,7 +56,7 @@ async def get_tasks(
 @router.post("", response_model=TaskResponse)
 async def create_task(
     task: TaskCreate,
-    user_id: str = Depends(get_user_id),
+    user_id: str = Depends(require_registered_user_id),
     db: Session = Depends(get_db),
 ):
     """Create a new task"""
@@ -70,7 +66,7 @@ async def create_task(
 
 @router.get("/tags", response_model=list[str])
 async def get_tags(
-    user_id: str = Depends(get_user_id),
+    user_id: str = Depends(require_registered_user_id),
     db: Session = Depends(get_db),
 ):
     """Get all unique tags used by the user"""
@@ -81,7 +77,7 @@ async def get_tags(
 @router.get("/course/{course_id}", response_model=list[TaskResponse])
 async def get_tasks_by_course(
     course_id: str,
-    user_id: str = Depends(get_user_id),
+    user_id: str = Depends(require_registered_user_id),
     db: Session = Depends(get_db),
 ):
     """Get all tasks for a specific course"""
@@ -92,7 +88,7 @@ async def get_tasks_by_course(
 @router.get("/{task_id}", response_model=TaskResponse)
 async def get_task(
     task_id: str,
-    user_id: str = Depends(get_user_id),
+    user_id: str = Depends(require_registered_user_id),
     db: Session = Depends(get_db),
 ):
     """Get a specific task by ID"""
@@ -107,7 +103,7 @@ async def get_task(
 async def update_task(
     task_id: str,
     updates: TaskUpdate,
-    user_id: str = Depends(get_user_id),
+    user_id: str = Depends(require_registered_user_id),
     db: Session = Depends(get_db),
 ):
     """Update an existing task"""
@@ -124,7 +120,7 @@ async def update_task(
 async def create_subtask(
     task_id: str,
     task: TaskCreate,
-    user_id: str = Depends(get_user_id),
+    user_id: str = Depends(require_registered_user_id),
     db: Session = Depends(get_db),
 ):
     """Create a subtask under a parent task"""
@@ -147,10 +143,12 @@ async def create_subtask(
 @router.post("/{task_id}/subdivide", response_model=list[TaskResponse])
 async def subdivide_task(
     task_id: str,
-    user_id: str = Depends(get_user_id),
+    user_id: str = Depends(require_registered_user_id),
     db: Session = Depends(get_db),
 ):
     """AIで親タスクをサブタスクに自動分割"""
+    if not settings.debug:
+        subdivide_limiter.check(user_id)
     service = TaskService(db)
     parent = service.get_task(task_id=task_id, user_id=user_id)
     if not parent:
@@ -160,13 +158,19 @@ async def subdivide_task(
     try:
         return await service.subdivide_task(parent)
     except GeminiServiceError as e:
+        if e.retry_after is not None:
+            raise HTTPException(
+                status_code=429,
+                detail=str(e),
+                headers={"Retry-After": str(e.retry_after), "X-RateLimit-Scope": "api"},
+            )
         raise HTTPException(status_code=502, detail=str(e))
 
 
 @router.delete("/{task_id}", status_code=204)
 async def delete_task(
     task_id: str,
-    user_id: str = Depends(get_user_id),
+    user_id: str = Depends(require_registered_user_id),
     db: Session = Depends(get_db),
 ):
     """Delete a task (and all subtasks)"""

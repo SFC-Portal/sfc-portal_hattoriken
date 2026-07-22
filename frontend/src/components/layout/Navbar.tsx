@@ -1,10 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useState } from "react";
-import { Menu, X } from "lucide-react";
+import Image from "next/image";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Menu, User as UserIcon, X } from "lucide-react";
 import { clsx } from "clsx";
+import { useAuthStore } from "@/lib/stores/authStore";
+import { useCurrentUser } from "@/lib/hooks/useAuth";
+import { deleteAccount } from "@/lib/api/auth";
+import { getSupabaseClient } from "@/lib/supabase/client";
 
 const NAV = [
   { label: "ホーム", href: "/" },
@@ -14,6 +20,104 @@ const NAV = [
   { label: "SNS", href: "/sns" },
   { label: "バス", href: "/bus" },
 ];
+
+function AuthArea() {
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const logout = useAuthStore((s) => s.logout);
+  const { data: user } = useCurrentUser();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [menuOpen]);
+
+  async function handleLogout() {
+    await getSupabaseClient().auth.signOut();
+    logout();
+    setMenuOpen(false);
+    router.refresh();
+  }
+
+  async function handleDeleteAccount() {
+    if (
+      !window.confirm(
+        "アカウントを削除します。保有するすべてのタスクも削除され、元に戻せません。本当によろしいですか？"
+      )
+    ) {
+      return;
+    }
+    setIsDeleting(true);
+    try {
+      await deleteAccount();
+      await getSupabaseClient().auth.signOut();
+      logout();
+      queryClient.removeQueries({ queryKey: ["currentUser"] });
+      router.push("/login");
+    } catch {
+      window.alert("アカウント削除に失敗しました。時間をおいて再度お試しください。");
+      setIsDeleting(false);
+    }
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <Link href="/login" className="px-3 py-1.5 rounded-md text-sm hover:bg-white/10">
+        ログイン
+      </Link>
+    );
+  }
+
+  return (
+    <div className="relative" ref={menuRef}>
+      <button
+        onClick={() => setMenuOpen((v) => !v)}
+        className="flex items-center gap-2 rounded-md px-2 py-1 hover:bg-white/10 transition-colors"
+        aria-label="アカウントメニュー"
+      >
+        {user?.avatarUrl ? (
+          <Image src={user.avatarUrl} alt="" width={24} height={24} className="rounded-full" />
+        ) : (
+          <UserIcon className="h-5 w-5" />
+        )}
+        {user?.displayName && <span className="text-sm">{user.displayName}</span>}
+      </button>
+
+      {menuOpen && (
+        <div className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-gray-200 bg-white text-gray-700 shadow-lg overflow-hidden z-10">
+          {user?.email && (
+            <div className="px-4 py-2.5 border-b border-gray-100 text-xs text-gray-500 truncate">
+              {user.email}
+            </div>
+          )}
+          <button
+            onClick={handleLogout}
+            className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors"
+          >
+            ログアウト
+          </button>
+          <button
+            onClick={handleDeleteAccount}
+            disabled={isDeleting}
+            className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
+          >
+            {isDeleting ? "削除中…" : "アカウントを削除"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function Navbar() {
   const pathname = usePathname();
@@ -34,6 +138,10 @@ export function Navbar() {
           ))}
         </ul>
 
+        <div className="hidden md:block">
+          <AuthArea />
+        </div>
+
         <button className="md:hidden" onClick={() => setOpen((v) => !v)} aria-label="メニュー">
           {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
@@ -50,6 +158,9 @@ export function Navbar() {
               </li>
             ))}
           </ul>
+          <div className="pt-2 border-t border-white/20 mt-2">
+            <AuthArea />
+          </div>
         </div>
       )}
     </nav>

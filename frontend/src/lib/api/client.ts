@@ -1,5 +1,6 @@
 import axios, { AxiosInstance, AxiosError } from "axios";
 import type { ApiError } from "@/types/common";
+import { getSupabaseClient } from "@/lib/supabase/client";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -30,10 +31,15 @@ export const apiClient: AxiosInstance = axios.create({
 });
 
 // リクエスト: camelCase → snake_case + 認証トークン付与
-apiClient.interceptors.request.use((config) => {
+// トークンはSupabase-jsが管理するセッションから都度取得する（自前でlocalStorageに保持しない）
+apiClient.interceptors.request.use(async (config) => {
   if (typeof window !== "undefined") {
-    const token = localStorage.getItem("access_token");
-    if (token) config.headers.Authorization = `Bearer ${token}`;
+    const {
+      data: { session },
+    } = await getSupabaseClient().auth.getSession();
+    if (session?.access_token) {
+      config.headers.Authorization = `Bearer ${session.access_token}`;
+    }
   }
   if (config.data && typeof config.data === "object") {
     config.data = mapKeys(config.data, toSnake);
@@ -48,8 +54,16 @@ apiClient.interceptors.response.use(
     return response;
   },
   (error: AxiosError<ApiError>) => {
-    if (error.response?.status === 401) {
-      if (typeof window !== "undefined") localStorage.removeItem("access_token");
+    // ログイン済みだがアカウント作成確認が未完了のセッション（別タブ等）を確認画面へ誘導する
+    const detail = (error.response?.data as { detail?: string } | undefined)?.detail;
+    if (
+      typeof window !== "undefined" &&
+      error.response?.status === 403 &&
+      detail === "account_not_registered"
+    ) {
+      const registerUrl = new URL("/register", window.location.origin);
+      registerUrl.searchParams.set("next", window.location.pathname);
+      window.location.href = registerUrl.toString();
     }
     return Promise.reject(error);
   }

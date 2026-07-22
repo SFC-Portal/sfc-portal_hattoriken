@@ -8,6 +8,9 @@ import httpx
 from app.core.config import settings
 from app.models.task import Task
 
+# Gemini自身が429応答のerror.detailsに含めるRetryInfo（例: "retryDelay": "30s"）を拾うためのパターン
+_RETRY_DELAY_PATTERN = re.compile(r"([\d.]+)\s*s")
+
 GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 
 # 恒常的なルールはsystemInstructionに分離し、per-requestプロンプトはタスク固有データのみに絞る
@@ -43,7 +46,51 @@ RESPONSE_SCHEMA = {
 
 
 class GeminiServiceError(Exception):
-    pass
+    def __init__(self, message: str, retry_after: int | None = None):
+        """retry_afterはGemini API自体がレート制限中の場合のみ設定する（何秒後に再試行可能か）"""
+        super().__init__(message)
+        self.retry_after = retry_after
+
+
+def _parse_gemini_retry_after(response: httpx.Response) -> int | None:
+    header_value = response.headers.get("retry-after")
+    if header_value and header_value.isdigit():
+        return int(header_value)
+
+    try:
+        body = response.json()
+        for detail in body.get("error", {}).get("details", []):
+            delay = detail.get("retryDelay")
+            if not delay:
+                continue
+            match = _RETRY_DELAY_PATTERN.match(delay)
+            if match:
+                return max(1, round(float(match.group(1))))
+    except (ValueError, json.JSONDecodeError):
+        pass
+    return None
+
+
+# responseSchemaでJSON出力を強制しても、まれにスキーマ強制用の内部指示文が
+# title/descriptionの中に漏れ込むことがある（配列の最後の要素で発生しやすい）。
+# 通常の日本語の作業内容には出てこない語の組み合わせで検出する。
+_LEAK_MARKERS = (
+    "do not include",
+    "extra text",
+    "parseable",
+    "outside the json",
+    "outside of the json",
+)
+
+
+def _is_contaminated(items: list) -> bool:
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        text = f"{item.get('title', '')} {item.get('description', '')}".lower()
+        if any(marker in text for marker in _LEAK_MARKERS):
+            return True
+    return False
 
 
 def _build_user_content(task: Task, effective_start: datetime, effective_due: datetime) -> str:
@@ -100,10 +147,12 @@ async def generate_subtask_suggestions(
         },
     }
 
-    # gemma-4-31b-itは高負荷時に5xx（"Internal error encountered"等）を一定確率で返すため、
-    # API自身が"temporary"と案内する一時エラーに限り1回だけ再試行する
-    res = None
+    # gemma-4-31b-itは高負荷時に5xx（"Internal error encountered"等）やタイムアウトを
+    # 一定確率で返すため、一時的とみなせるエラーに限り1回だけ再試行する。
+    # また、スキーマ強制用の内部指示文がまれに出力内容に漏れ込むことがあるため、
+    # そちらも検出できた場合は同じ枠内で1回だけ再試行する。
     for attempt in range(2):
+        is_last_attempt = attempt == 1
         try:
             async with httpx.AsyncClient(timeout=15.0) as client:
                 res = await client.post(
@@ -112,29 +161,47 @@ async def generate_subtask_suggestions(
                     json=payload,
                 )
             res.raise_for_status()
-            break
         except httpx.HTTPStatusError as e:
-            if e.response.status_code < 500 or attempt == 1:
+            if e.response.status_code == 429:
+                retry_after = _parse_gemini_retry_after(e.response) or 60
+                raise GeminiServiceError(
+                    "Gemini APIの利用上限に達しました（アプリ全体の制限）", retry_after=retry_after
+                ) from e
+            if e.response.status_code < 500 or is_last_attempt:
                 raise GeminiServiceError(f"Gemini APIへの接続に失敗しました: {e}") from e
             await asyncio.sleep(1.5)
+            continue
+        except httpx.TimeoutException as e:
+            if is_last_attempt:
+                raise GeminiServiceError(
+                    f"Gemini APIへの接続がタイムアウトしました: {str(e) or type(e).__name__}"
+                ) from e
+            continue
         except httpx.HTTPError as e:
-            raise GeminiServiceError(f"Gemini APIへの接続に失敗しました: {e or type(e).__name__}") from e
+            raise GeminiServiceError(
+                f"Gemini APIへの接続に失敗しました: {str(e) or type(e).__name__}"
+            ) from e
 
-    body = res.json()
-    try:
-        parts = body["candidates"][0]["content"]["parts"]
-        # 推論系モデル（gemma-4等）はthought=trueの思考過程パートを先に返すため除外する
-        text = next(p["text"] for p in reversed(parts) if not p.get("thought") and "text" in p)
-    except (KeyError, IndexError, StopIteration) as e:
-        raise GeminiServiceError("Gemini APIの応答が不正です") from e
+        body = res.json()
+        try:
+            parts = body["candidates"][0]["content"]["parts"]
+            # 推論系モデル（gemma-4等）はthought=trueの思考過程パートを先に返すため除外する
+            text = next(p["text"] for p in reversed(parts) if not p.get("thought") and "text" in p)
+        except (KeyError, IndexError, StopIteration) as e:
+            raise GeminiServiceError("Gemini APIの応答が不正です") from e
 
-    cleaned = re.sub(r"```json|```", "", text).strip()
-    try:
-        parsed = json.loads(cleaned)
-    except json.JSONDecodeError as e:
-        raise GeminiServiceError("Gemini APIの応答をJSONとして解析できませんでした") from e
+        cleaned = re.sub(r"```json|```", "", text).strip()
+        try:
+            parsed = json.loads(cleaned)
+        except json.JSONDecodeError as e:
+            raise GeminiServiceError("Gemini APIの応答をJSONとして解析できませんでした") from e
 
-    if not isinstance(parsed, list):
-        raise GeminiServiceError("Gemini APIの応答形式が不正です")
+        if not isinstance(parsed, list):
+            raise GeminiServiceError("Gemini APIの応答形式が不正です")
 
-    return parsed
+        if _is_contaminated(parsed):
+            if is_last_attempt:
+                raise GeminiServiceError("Gemini APIの応答に不要な文章が混入しました")
+            continue
+
+        return parsed
