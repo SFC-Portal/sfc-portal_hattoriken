@@ -3,12 +3,13 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Menu, User as UserIcon, X } from "lucide-react";
 import { clsx } from "clsx";
 import { useAuthStore } from "@/lib/stores/authStore";
 import { useCurrentUser } from "@/lib/hooks/useAuth";
+import { useOnClickOutside } from "@/lib/hooks/useOnClickOutside";
 import { deleteAccount } from "@/lib/api/auth";
 import { getSupabaseClient } from "@/lib/supabase/client";
 
@@ -31,16 +32,7 @@ function AuthArea() {
   const [isDeleting, setIsDeleting] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!menuOpen) return;
-    function handleClickOutside(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [menuOpen]);
+  useOnClickOutside(menuRef, () => setMenuOpen(false), menuOpen);
 
   async function handleLogout() {
     await getSupabaseClient().auth.signOut();

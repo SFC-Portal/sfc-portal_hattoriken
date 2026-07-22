@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -7,11 +9,22 @@ from app.core.config import settings
 from app.core.rate_limit import global_limiter
 from app.api.v1.router import api_router
 
+logger = logging.getLogger(__name__)
+
 _RATE_LIMIT_EXEMPT_PATHS = {"/health", "/docs", "/openapi.json", "/redoc"}
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # rate_limit.pyのRateLimiterはプロセス内メモリのみで完結する。
+    # 複数ワーカー/複数インスタンスで動かすと各プロセスが別々にカウントし、
+    # Gemini APIの無料枠保護が実質的に無効化される（ワーカー数倍まで緩んでしまう）ため、
+    # スケールさせる前に必ずRedis等の共有ストアへ置き換えること
+    if not settings.debug:
+        logger.warning(
+            "rate_limit.RateLimiterはプロセス内メモリのみで動作します。"
+            "複数ワーカー/複数インスタンスで実行する場合はRedis等の共有ストアに置き換えてください。"
+        )
     if settings.debug:
         _ensure_dev_user()
     yield
