@@ -75,12 +75,16 @@ class TaskService:
             .first()
         )
 
-    def create_task(self, user_id: str, data: dict) -> Task:
-        task = Task(
+    @staticmethod
+    def _build_task(user_id: str, data: dict) -> Task:
+        return Task(
             id=str(uuid.uuid4()),
             user_id=user_id,
             **{k: v for k, v in data.items() if v is not None},
         )
+
+    def create_task(self, user_id: str, data: dict) -> Task:
+        task = self._build_task(user_id, data)
         self.db.add(task)
         self.db.commit()
         self.db.refresh(task)
@@ -157,7 +161,7 @@ class TaskService:
         else:
             date_mode = "range"
 
-        created = []
+        tasks = []
         for s in suggestions:
             if date_mode == "none":
                 start_date = None
@@ -179,17 +183,26 @@ class TaskService:
                 "priority": parent.priority,
                 "category": parent.category,
             }
-            created.append(self.create_task(user_id=parent.user_id, data=data))
-        return created
+            tasks.append(self._build_task(user_id=parent.user_id, data=data))
+
+        # 1件ずつcommitせず、まとめて1トランザクションで確定する（全件成功か全件失敗かのどちらかにする）
+        self.db.add_all(tasks)
+        self.db.commit()
+        for task in tasks:
+            self.db.refresh(task)
+        return tasks
 
     @staticmethod
     def _parse_date(value, fallback):
         if not value:
             return fallback
         try:
-            return datetime.fromisoformat(value)
+            parsed = datetime.fromisoformat(value)
         except (TypeError, ValueError):
             return fallback
+        # Geminiは日付のみ（YYYY-MM-DD）を返すためnaive datetimeになる。
+        # due_date/start_dateはtimezone-aware列なのでUTCとして明示する
+        return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
 
     def get_tags(self, user_id: str) -> list:
         from sqlalchemy import text

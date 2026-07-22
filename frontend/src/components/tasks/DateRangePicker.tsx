@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
+import { useOnClickOutside } from "@/lib/hooks/useOnClickOutside";
 
 export interface DateRangePickerProps {
   startDate?: string; // "YYYY-MM-DD" or ISO
@@ -36,15 +37,7 @@ export function DateRangePicker({ startDate, endDate, onChange }: DateRangePicke
   const [popupPos, setPopupPos] = useState({ top: 0, left: 0 });
 
   // Close on outside click
-  useEffect(() => {
-    if (!open) return;
-    const h = (e: MouseEvent) => {
-      const t = e.target as Node;
-      if (!triggerRef.current?.contains(t) && !popupRef.current?.contains(t)) setOpen(false);
-    };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
-  }, [open]);
+  useOnClickOutside([triggerRef, popupRef], () => setOpen(false), open);
 
   function handleOpen() {
     if (open) { setOpen(false); return; }

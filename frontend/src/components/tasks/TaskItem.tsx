@@ -1,154 +1,20 @@
 "use client";
 
-import { Fragment, useState, useRef, useEffect, KeyboardEvent } from "react";
+import { Fragment, useState } from "react";
 import axios from "axios";
-import { useUpdateTask, useDeleteTask, useCreateSubtask, useSubdivideTask } from "@/lib/hooks/useTasks";
+import { useUpdateTask, useDeleteTask, useSubdivideTask } from "@/lib/hooks/useTasks";
+import { useAiSubdivideStore } from "@/lib/stores/aiSubdivideStore";
 import { TaskForm } from "./TaskForm";
-import { DateRangePicker } from "./DateRangePicker";
-import type { Task, TaskPriority, TaskStatus } from "@/types/task";
-
-// === 定数 ===
-const PRIORITY_STYLES: Record<TaskPriority, string> = {
-  low: "bg-gray-100 text-gray-600",
-  medium: "bg-blue-100 text-blue-700",
-  high: "bg-orange-100 text-orange-700",
-  urgent: "bg-red-100 text-red-700",
-};
-const PRIORITY_LABELS: Record<TaskPriority, string> = {
-  low: "低", medium: "中", high: "高", urgent: "緊急",
-};
-
-function formatDate(d?: string) {
-  if (!d) return null;
-  // タイムゾーン問題を避けるため日付文字列を直接パース
-  const [, m, day] = d.split("T")[0].split("-");
-  return `${parseInt(m)}/${parseInt(day)}`;
-}
-function isOverdue(d?: string, status?: TaskStatus) {
-  if (!d || status === "done") return false;
-  // 当日EODまでは期限切れとしない
-  const [y, m, day] = d.split("T")[0].split("-").map(Number);
-  return new Date(y, m - 1, day, 23, 59, 59) < new Date();
-}
-function periodText(task: Task) {
-  const sDay = task.startDate?.split("T")[0];
-  const eDay = task.dueDate?.split("T")[0];
-  const s = formatDate(task.startDate);
-  const e = formatDate(task.dueDate);
-  // 同じ日 or 片方のみ → arrowなし
-  if (s && e && sDay !== eDay) return `${s} → ${e}`;
-  if (s) return s;
-  if (e) return e;
-  return null;
-}
-// 4行以上 or 180文字以上の場合だけ展開ボタンを表示
-function needsExpand(desc?: string) {
-  if (!desc?.trim()) return false;
-  return (desc.split("\n").length > 3) || (desc.length > 180);
-}
-
-// === サブタスク追加フォーム ===
-function SubTaskAddForm({ parentId, onDone }: { parentId: string; onDone: () => void }) {
-  const createSubtask = useCreateSubtask();
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [startDate, setStartDate] = useState<string | undefined>();
-  const [dueDate, setDueDate] = useState<string | undefined>();
-  const titleRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => { titleRef.current?.focus(); }, []);
-
-  function submit() {
-    const t = title.trim();
-    if (!t) return;
-    createSubtask.mutate(
-      { parentId, input: { title: t, description: description || undefined, startDate, dueDate } },
-      { onSuccess: onDone },
-    );
-  }
-
-  return (
-    <div className="card p-4 space-y-3">
-      <p className="text-sm font-medium text-gray-600">サブタスクを追加</p>
-      <input
-        ref={titleRef}
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => {
-          if (e.key === "Enter") { e.preventDefault(); submit(); }
-          if (e.key === "Escape") onDone();
-        }}
-        placeholder="タスク名 *"
-        disabled={createSubtask.isPending}
-        className="input-base w-full"
-      />
-      <textarea
-        value={description}
-        onChange={(e) => setDescription(e.target.value)}
-        placeholder="説明（任意）"
-        rows={2}
-        disabled={createSubtask.isPending}
-        className="input-base w-full resize-none text-sm"
-      />
-      <div>
-        <label className="block text-xs font-medium text-gray-600 mb-1">期間</label>
-        <DateRangePicker
-          startDate={startDate}
-          endDate={dueDate}
-          onChange={(s, e) => { setStartDate(s); setDueDate(e); }}
-        />
-      </div>
-      <p className="text-sm text-gray-500">優先度・タグ・カテゴリは親タスクから自動引き継ぎ</p>
-      <div className="flex gap-2 justify-end pt-1">
-        <button type="button" onClick={onDone}
-          className="text-sm text-gray-500 hover:text-gray-700 px-3 py-1.5">キャンセル</button>
-        <button type="button" onClick={submit}
-          disabled={!title.trim() || createSubtask.isPending}
-          className="btn-primary text-sm disabled:opacity-40 disabled:cursor-not-allowed">
-          {createSubtask.isPending ? "追加中…" : "追加"}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// === 状態（アクティブ）ボタン ===
-function ActiveButton({ task }: { task: Task }) {
-  const updateTask = useUpdateTask();
-  if (task.status === "done") return null;
-
-  const isActive = task.status === "in_progress";
-
-  function toggle(e: React.MouseEvent) {
-    e.stopPropagation();
-    updateTask.mutate({ id: task.id, input: { status: isActive ? "todo" : "in_progress" } });
-  }
-
-  return (
-    <button
-      onClick={toggle}
-      disabled={updateTask.isPending}
-      title={isActive ? "進行中（クリックで停止）" : "開始する"}
-      className={`flex-shrink-0 flex items-center gap-1 text-sm font-medium px-2.5 py-1 rounded-full border transition-all ${
-        isActive
-          ? "bg-sfc-blue text-white border-sfc-blue"
-          : "text-gray-500 border-gray-200 hover:border-sfc-blue hover:text-sfc-blue"
-      }`}
-    >
-      <svg
-        className="w-3 h-3"
-        fill={isActive ? "currentColor" : "none"}
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={2}
-      >
-        <path strokeLinecap="round" strokeLinejoin="round"
-          d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z" />
-      </svg>
-      {isActive ? "進行中" : "開始"}
-    </button>
-  );
-}
+import { SubTaskAddForm } from "./SubTaskAddForm";
+import { ActiveButton } from "./ActiveButton";
+import {
+  PRIORITY_STYLES,
+  PRIORITY_LABELS,
+  isOverdue,
+  periodText,
+  needsExpand,
+} from "@/lib/utils/taskDisplay";
+import type { Task } from "@/types/task";
 
 // === 統一タスクカード ===
 interface TaskCardProps {
@@ -161,6 +27,14 @@ function TaskCard({ task, depth, breadcrumb }: TaskCardProps) {
   const updateTask = useUpdateTask();
   const deleteTask = useDeleteTask();
   const subdivideTask = useSubdivideTask();
+  const userRateLimitedUntil = useAiSubdivideStore((s) => s.userRateLimitedUntil);
+  const apiRateLimitedUntil = useAiSubdivideStore((s) => s.apiRateLimitedUntil);
+  const setUserRateLimited = useAiSubdivideStore((s) => s.setUserRateLimited);
+  const setApiRateLimited = useAiSubdivideStore((s) => s.setApiRateLimited);
+  const now = Date.now();
+  const isSubdivideRateLimited =
+    (!!userRateLimitedUntil && userRateLimitedUntil > now) ||
+    (!!apiRateLimitedUntil && apiRateLimitedUntil > now);
   const [descExpanded, setDescExpanded] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [subtasksOpen, setSubtasksOpen] = useState(false);
@@ -197,12 +71,27 @@ function TaskCard({ task, depth, breadcrumb }: TaskCardProps) {
 
   function handleSubdivideClick(e: React.MouseEvent) {
     e.stopPropagation();
+    if (isSubdivideRateLimited) return;
     setSubtasksOpen(true);
     subdivideTask.mutate(task.id, {
       onError: (err) => {
         const detail = axios.isAxiosError(err)
           ? (err.response?.data as { detail?: string } | undefined)?.detail
           : undefined;
+        if (axios.isAxiosError(err) && err.response?.status === 429) {
+          const retryAfter = Number(err.response.headers["retry-after"]) || 3600;
+          const scope = err.response.headers["x-ratelimit-scope"];
+          // scope="ip"（API全体への簡易フラッド対策）はこのユーザー個人のAI利用制限ではないため、
+          // 誤って「利用制限中」表示にしない。user/api以外は汎用エラーとして扱う
+          if (scope === "user") {
+            setUserRateLimited(retryAfter);
+          } else if (scope === "api") {
+            setApiRateLimited(retryAfter);
+          } else {
+            window.alert("リクエストが多すぎます。しばらく待ってから再度お試しください。");
+          }
+          return;
+        }
         window.alert(detail || "AI細分化に失敗しました");
       },
     });
@@ -395,14 +284,14 @@ function TaskCard({ task, depth, breadcrumb }: TaskCardProps) {
               <div className="flex items-center gap-3">
                 <button
                   onClick={handleSubdivideClick}
-                  disabled={subdivideTask.isPending}
-                  title="AIでサブタスクに分割"
+                  disabled={subdivideTask.isPending || isSubdivideRateLimited}
+                  title={isSubdivideRateLimited ? "AI細分化は現在ご利用いただけません" : "AIでサブタスクに分割"}
                   className="text-sm font-medium text-gray-600 hover:text-sfc-blue transition-colors flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:text-gray-600"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z" />
                   </svg>
-                  {subdivideTask.isPending ? "生成中…" : "AI細分化"}
+                  {subdivideTask.isPending ? "生成中…" : isSubdivideRateLimited ? "利用制限中" : "AI細分化"}
                 </button>
                 <button
                   onClick={handleAddSubtaskClick}

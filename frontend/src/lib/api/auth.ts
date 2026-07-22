@@ -6,6 +6,15 @@ export async function getCurrentUser(): Promise<User> {
   return data;
 }
 
+export async function registerAccount(): Promise<User> {
+  const { data } = await apiClient.post("/auth/register");
+  return data;
+}
+
+export async function deleteAccount(): Promise<void> {
+  await apiClient.delete("/auth/me");
+}
+
 export async function getUserProfile(userId: string): Promise<UserProfile> {
   const { data } = await apiClient.get(`/users/${userId}/profile`);
   return data;

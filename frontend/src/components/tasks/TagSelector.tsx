@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useRef, useEffect, KeyboardEvent } from "react";
+import { useState, useRef, KeyboardEvent } from "react";
 import { useAvailableTags } from "@/lib/hooks/useTasks";
+import { useOnClickOutside } from "@/lib/hooks/useOnClickOutside";
 
 // デフォルトタグ（初期状態で選択肢として表示）
 const DEFAULT_TAGS = ["課題", "試験", "プロジェクト", "読書", "仕事", "個人", "重要", "開発", "その他"];
@@ -43,15 +44,7 @@ export function TagSelector({ selected, onChange }: TagSelectorProps) {
   const canCreate = input.trim() && !available.includes(input.trim()) && !selected.includes(input.trim());
 
   // 外クリックで閉じる
-  useEffect(() => {
-    if (!open) return;
-    const h = (e: MouseEvent) => {
-      const t = e.target as Node;
-      if (!triggerRef.current?.contains(t) && !dropdownRef.current?.contains(t)) setOpen(false);
-    };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
-  }, [open]);
+  useOnClickOutside([triggerRef, dropdownRef], () => setOpen(false), open);
 
   function openDropdown() {
     if (!triggerRef.current) return;
