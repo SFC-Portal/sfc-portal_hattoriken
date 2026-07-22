@@ -220,7 +220,7 @@ cd sfc-portal_hattoriken
 # frontend/.env.local と backend/.env に環境変数を設定（担当者から取得）
 
 # 2回目以降
-./scripts/dev.sh
+./scripts/start.sh
 ```
 
 ---
