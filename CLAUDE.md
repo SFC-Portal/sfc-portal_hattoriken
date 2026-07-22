@@ -168,18 +168,25 @@ page.tsx → components/ → hooks/ → api/ → types/
 
 - **UI文言**: 日本語
 - **APIパス**: `/api/v1/` プレフィックス
-- **認証**: Supabase Auth
+- **認証**: Supabase Auth（Google OAuth）。バックエンドは`backend/app/api/deps.py`の
+  `require_registered_user_id`（登録済みユーザー必須）/ `get_current_user_id`（JWT検証のみ）を
+  `Depends()`で使う。新しいエンドポイントもこれを再利用する（自前で認証ロジックを書かない）。
+  フロントエンドは`frontend/src/middleware.ts`の`PROTECTED_PATHS`に保護対象パスを追加する
 - **状態管理**: サーバー=React Query、クライアント=Zustand
 
 ## 機能モジュール
 
-| 機能     | パス         | 状態                              |
-| -------- | ------------ | --------------------------------- |
-| シラバス | `/syllabus`  | スタブ                            |
-| 時間割   | `/timetable` | スタブ                            |
-| タスク   | `/tasks`     | 実装済み（PR #7）、AI細分化は未実装 |
-| SNS      | `/sns`       | スタブ                            |
-| バス     | `/bus`       | スタブ                            |
+| 機能     | パス         | 状態                                                        |
+| -------- | ------------ | ----------------------------------------------------------- |
+| シラバス | `/syllabus`  | スタブ                                                      |
+| 時間割   | `/timetable` | スタブ（ログイン必須）                                      |
+| タスク   | `/tasks`     | 実装済み（AI細分化・レート制限・モバイル対応まで完了）      |
+| SNS      | `/sns`       | スタブ（ログイン必須）                                      |
+| バス     | `/bus`       | スタブ                                                      |
+
+認証（Google OAuth × Supabase Auth）はアプリ全体の基盤として実装済み。ログイン・ログアウト・
+アカウント削除は`frontend/src/components/layout/Navbar.tsx`、ログイン画面は`/login`、
+初回ログイン時のアカウント作成確認は`/register`。
 
 ### DBスキーマ変更時の注意
 

@@ -52,14 +52,17 @@ cd sfc-portal_hattoriken
 
 | 変数名 | 内容 |
 |--------|------|
-| `SUPABASE_URL` | Supabase Project URL |
+| `SUPABASE_URL` | Supabase Project URL（JWT検証用のJWKS取得にも使う） |
 | `SUPABASE_KEY` | Secret key |
-| `DATABASE_URL` | DB接続文字列（`postgresql://...`） |
-| `SECRET_KEY` | 任意のランダム文字列 |
+| `DATABASE_URL` | DB接続文字列。**Session Pooler**の接続文字列を使うこと（Supabaseダッシュボード「Connect」→「Session pooler」からコピー。直接接続用ホスト名は名前解決できないことがある） |
+| `SECRET_KEY` | 任意のランダム文字列（現状未使用、将来のための予約） |
 | `CORS_ORIGINS` | `["http://localhost:3000"]`（固定） |
-| `DEBUG` | `true`（固定） |
+| `DEBUG` | `true`（固定・ローカル開発時） |
+| `GEMINI_API_KEY` | Gemini APIキー（AI細分化機能用） |
+| `GEMINI_MODEL` | `gemma-4-31b-it`（固定） |
 
 > **注意**: `.env` ファイルは絶対にgitにコミットしないでください。
+> Google OAuthを使ったログインは、環境管理担当者がSupabase側で設定済みのため追加設定は不要です。
 
 ---
 
@@ -211,6 +214,12 @@ Ctrl+C
 
 > **どちらを使うべきか**: 同じターミナル内なら Ctrl+C、ターミナルを閉じてしまった場合や Claude Code から操作する場合は `stop.sh` を使う。
 
+### 3.2 ログインについて
+
+`/tasks`・`/timetable`・`/sns` はGoogleログイン必須（Supabase Auth × Google OAuth）。ブラウザで `http://localhost:3000` を開き、これらのページにアクセスすると自動的に `/login` へリダイレクトされるので、「Googleでログイン」から自分のGoogleアカウントでログインすること。初回ログイン時はアカウント作成の確認画面が挟まる。
+
+バックエンドAPIを`curl`等で直接叩く場合のみ、`backend/.env`の`DEBUG=true`によりAuthorizationヘッダ無しでも固定のダミーユーザーとして通る（フロントエンドの画面遷移では使えない、あくまでAPI単体テスト用）。
+
 #### 方法B: 個別に起動
 
 **ターミナル1（フロントエンド）:**
@@ -240,7 +249,7 @@ claude
 フロントエンドの開発サーバーを起動してください
 ```
 
-### 3.2 AIを使った開発
+### 3.3 AIを使った開発
 
 #### Claude Code（推奨）
 
@@ -431,7 +440,7 @@ git commit -m "変更内容"
 git push -u origin {branch-name}
 
 # 開発サーバー起動（一括）
-./scripts/dev.sh
+./scripts/start.sh
 
 # 個別起動
 cd frontend && npm run dev
