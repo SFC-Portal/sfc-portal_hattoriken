@@ -255,7 +255,7 @@ function TaskCard({ task, depth, breadcrumb }: TaskCardProps) {
           className="border-t border-gray-100 px-4 pb-3 pt-2"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="flex items-center justify-between pl-8">
+          <div className="flex flex-wrap items-center justify-between gap-2 pl-8">
             {subTaskCount > 0 ? (
               <button
                 onClick={() => setSubtasksOpen((v) => !v)}

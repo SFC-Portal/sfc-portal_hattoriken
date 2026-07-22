@@ -3,6 +3,9 @@
 import { useState, useRef, KeyboardEvent } from "react";
 import { useAvailableTags } from "@/lib/hooks/useTasks";
 import { useOnClickOutside } from "@/lib/hooks/useOnClickOutside";
+import { clampPopupLeft } from "@/lib/utils/popupPosition";
+
+const MIN_DROPDOWN_WIDTH = 220;
 
 // デフォルトタグ（初期状態で選択肢として表示）
 const DEFAULT_TAGS = ["課題", "試験", "プロジェクト", "読書", "仕事", "個人", "重要", "開発", "その他"];
@@ -49,7 +52,8 @@ export function TagSelector({ selected, onChange }: TagSelectorProps) {
   function openDropdown() {
     if (!triggerRef.current) return;
     const r = triggerRef.current.getBoundingClientRect();
-    setDropPos({ top: r.bottom + 4, left: r.left, width: r.width });
+    const width = Math.max(r.width, MIN_DROPDOWN_WIDTH);
+    setDropPos({ top: r.bottom + 4, left: clampPopupLeft(r.left, width), width });
     setOpen(true);
     setTimeout(() => inputRef.current?.focus(), 50);
   }
@@ -132,20 +136,20 @@ export function TagSelector({ selected, onChange }: TagSelectorProps) {
       {open && (
         <div
           ref={dropdownRef}
-          style={{ position: "fixed", top: dropPos.top, left: dropPos.left, width: Math.max(dropPos.width, 220), zIndex: 9999 }}
+          style={{ position: "fixed", top: dropPos.top, left: dropPos.left, width: dropPos.width, zIndex: 9999 }}
           className="bg-white border border-gray-200 rounded-xl shadow-xl py-1 max-h-52 overflow-y-auto"
         >
           {filtered.map((tag) => (
             <div
               key={tag}
-              className="flex items-center justify-between px-3 py-1.5 hover:bg-gray-50 cursor-pointer group"
+              className="flex items-center justify-between px-3 py-1.5 hover:bg-gray-50 cursor-pointer"
               onClick={() => addTag(tag)}
             >
               <span className="text-sm text-gray-700">#{tag}</span>
               <button
                 type="button"
                 onClick={(e) => deleteFromList(tag, e)}
-                className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-400 transition-all text-xs leading-none p-1"
+                className="text-gray-300 hover:text-red-400 transition-colors text-xs leading-none p-1"
                 title="リストから削除"
               >
                 ×

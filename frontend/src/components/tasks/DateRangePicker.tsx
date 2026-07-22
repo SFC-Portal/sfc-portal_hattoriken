@@ -2,6 +2,9 @@
 
 import { useState, useRef } from "react";
 import { useOnClickOutside } from "@/lib/hooks/useOnClickOutside";
+import { clampPopupLeft } from "@/lib/utils/popupPosition";
+
+const POPUP_WIDTH = 288; // w-72
 
 export interface DateRangePickerProps {
   startDate?: string; // "YYYY-MM-DD" or ISO
@@ -50,7 +53,7 @@ export function DateRangePicker({ startDate, endDate, onChange }: DateRangePicke
     setHoverDate(undefined);
     if (triggerRef.current) {
       const r = triggerRef.current.getBoundingClientRect();
-      setPopupPos({ top: r.bottom + 6, left: r.left });
+      setPopupPos({ top: r.bottom + 6, left: clampPopupLeft(r.left, POPUP_WIDTH) });
     }
     setOpen(true);
   }

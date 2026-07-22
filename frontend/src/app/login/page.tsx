@@ -31,7 +31,7 @@ function LoginForm() {
 
   return (
     <div className="flex min-h-[60vh] items-center justify-center">
-      <div className="card w-full max-w-sm p-8 text-center">
+      <div className="card w-full max-w-sm p-6 sm:p-8 text-center">
         <h1 className="text-xl font-bold text-sfc-blue">SFC Portal</h1>
         <p className="mt-2 text-sm text-gray-500">
           慶應義塾大学SFCのアカウントでログインしてください。
